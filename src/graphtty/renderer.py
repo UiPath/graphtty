@@ -451,8 +451,8 @@ def _backward_edge_corridors(
     Returns ``(corridor_map, margin)`` where *corridor_map* maps edge index
     to a global route_x value and *margin* is the extra right-side space needed.
 
-    All backward edges route to the right of **every** box in the graph so
-    they never cut through other nodes (e.g. subgraph boxes).
+    Each backward edge routes to the right of boxes that vertically overlap
+    with the edge's path, so corridors stay close to the connected nodes.
     """
     global_max_right = max((b.x + b.w for b in boxes.values()), default=0)
     corridor_map: dict[int, int] = {}
@@ -463,9 +463,25 @@ def _backward_edge_corridors(
         if src is None or tgt is None:
             continue
         if tgt.bottom < src.top:
-            corridor_map[idx] = global_max_right + 3 + slot * 3
+            # Only clear boxes whose y-range overlaps the edge path
+            src_mid_y = src.y + src.h // 2
+            tgt_mid_y = tgt.y + tgt.h // 2
+            y_min = min(src_mid_y, tgt_mid_y)
+            y_max = max(src_mid_y, tgt_mid_y)
+
+            local_max_right = 0
+            for b in boxes.values():
+                if b.y < y_max and (b.y + b.h) > y_min:
+                    local_max_right = max(local_max_right, b.x + b.w)
+
+            corridor_map[idx] = local_max_right + 3 + slot * 3
             slot += 1
-    margin = (3 + slot * 3) if slot else 0
+
+    if not corridor_map:
+        return corridor_map, 0
+
+    max_route_x = max(corridor_map.values())
+    margin = max(0, max_route_x - global_max_right + 3)
     return corridor_map, margin
 
 
