@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from typing import Any
 
@@ -83,6 +84,13 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="List available themes and exit",
     )
+    parser.add_argument(
+        "-w",
+        "--width",
+        type=int,
+        default=None,
+        help="Max output width in columns (0 = no limit, default = terminal width)",
+    )
 
     args = parser.parse_args(argv)
 
@@ -113,10 +121,19 @@ def main(argv: list[str] | None = None) -> None:
     _preprocess_nodes(data)
     graph = AsciiGraph(**data)
 
+    # Determine max_width: explicit flag > tty auto-detect > no limit (piped)
+    if args.width is not None:
+        max_width = None if args.width == 0 else args.width
+    elif sys.stdout.isatty():
+        max_width = shutil.get_terminal_size().columns
+    else:
+        max_width = None
+
     options = RenderOptions(
         use_unicode=not args.ascii,
         show_types=not args.no_types,
         theme=theme,
+        max_width=max_width,
     )
 
     print(render(graph, options))

@@ -5,6 +5,7 @@ Uses grandalf (Sugiyama algorithm) for DAG layout and renders to ASCII/Unicode a
 
 from __future__ import annotations
 
+import textwrap
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -24,6 +25,9 @@ from .types import AsciiEdge, AsciiGraph, AsciiNode
 # characters, treat the edge as a straight vertical line.
 _STRAIGHT_TOLERANCE = 2
 
+_MAX_ITEMS_SHOWN = 5
+_META_MAX_LINE = 40
+
 
 @dataclass
 class RenderOptions:
@@ -33,6 +37,7 @@ class RenderOptions:
     show_types: bool = True
     padding: int = 2
     theme: Theme = field(default_factory=lambda: DEFAULT_THEME)
+    max_width: int | None = None
 
 
 def render(
@@ -79,6 +84,27 @@ def _render_canvas(
     graph: AsciiGraph,
     options: RenderOptions,
 ) -> Canvas:
+    """Adaptive rendering — re-renders with shorter descriptions to fit max_width."""
+    max_width = options.max_width
+    meta_max = _META_MAX_LINE
+
+    for _ in range(3):
+        canvas = _do_render_canvas(graph, options, meta_max)
+        if max_width is None or canvas.width <= max_width:
+            return canvas
+        if meta_max <= 0:
+            return canvas
+        ratio = max_width / canvas.width
+        meta_max = max(0, int(meta_max * ratio) - 1)
+
+    return canvas
+
+
+def _do_render_canvas(
+    graph: AsciiGraph,
+    options: RenderOptions,
+    meta_max_line: int = _META_MAX_LINE,
+) -> Canvas:
     """Core rendering — returns the Canvas (with per-cell colors)."""
     theme = options.theme
 
@@ -89,11 +115,14 @@ def _render_canvas(
         show_types=options.show_types,
         padding=0,
         theme=options.theme,
+        max_width=options.max_width,
     )
     subgraph_canvases: dict[str, Canvas] = {}
     for node in graph.nodes:
         if node.subgraph and node.subgraph.nodes:
-            subgraph_canvases[node.id] = _render_canvas(node.subgraph, sub_options)
+            subgraph_canvases[node.id] = _do_render_canvas(
+                node.subgraph, sub_options, meta_max_line
+            )
 
     # 2. Compute node box sizes (in character coordinates)
     node_sizes: dict[str, tuple[int, int]] = {}
@@ -107,7 +136,7 @@ def _render_canvas(
         content_lines: list[str] = []
 
         # Build metadata detail lines (description wrapping)
-        meta_lines = _metadata_lines(node)
+        meta_lines = _metadata_lines(node, meta_max_line)
 
         if node.id in subgraph_canvases:
             # Subgraph node: size from the canvas (NOT from string lengths)
@@ -219,9 +248,6 @@ def _render_canvas(
 # Node types that are structural markers — no border label needed.
 _HIDDEN_TYPE_LABELS = {"__start__", "__end__"}
 
-_TOOLS_SHOWN = 5
-_META_MAX_LINE = 40
-
 
 def _type_label(node_type: str, show_types: bool) -> str | None:
     """Return the border type label, or *None* if it should be hidden."""
@@ -232,9 +258,9 @@ def _type_label(node_type: str, show_types: bool) -> str | None:
     return node_type
 
 
-def _metadata_lines(node: AsciiNode) -> list[str]:
+def _metadata_lines(node: AsciiNode, max_line: int = _META_MAX_LINE) -> list[str]:
     """Build display lines from *node.description* with word-wrapping."""
-    if not node.description:
+    if not node.description or max_line <= 0:
         return []
 
     # Split comma-separated descriptions into wrapped lines
@@ -242,19 +268,19 @@ def _metadata_lines(node: AsciiNode) -> list[str]:
     if not items:
         return []
 
-    # If it's a single value (no commas), return it directly
+    # If it's a single value (no commas), word-wrap it
     if len(items) == 1:
-        return [items[0]]
+        return textwrap.wrap(items[0], width=max_line) or [items[0]]
 
-    # Multiple items: wrap at _META_MAX_LINE
+    # Multiple items: wrap at max_line
     lines: list[str] = []
-    shown = items[:_TOOLS_SHOWN]
+    shown = items[:_MAX_ITEMS_SHOWN]
     remainder = len(items) - len(shown)
     row: list[str] = []
     row_len = 0
     for name in shown:
         added = len(name) + (2 if row else 0)  # ", " separator
-        if row and row_len + added > _META_MAX_LINE:
+        if row and row_len + added > max_line:
             lines.append(", ".join(row))
             row = [name]
             row_len = len(name)
@@ -264,7 +290,7 @@ def _metadata_lines(node: AsciiNode) -> list[str]:
     if remainder > 0:
         suffix = f"+{remainder} more"
         added = len(suffix) + (2 if row else 0)
-        if row and row_len + added > _META_MAX_LINE:
+        if row and row_len + added > max_line:
             lines.append(", ".join(row))
             lines.append(suffix)
         else:
