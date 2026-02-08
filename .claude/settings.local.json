@@ -18,7 +18,11 @@
       "WebSearch",
       "WebFetch(domain:*)",
       "Bash(git clone:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
