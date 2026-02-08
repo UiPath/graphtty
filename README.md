@@ -20,6 +20,8 @@ pip install graphtty
 
 <img src="https://raw.githubusercontent.com/uipath/graphtty/main/screenshots/supervisor-agent.png" width="700">
 
+> More examples available in the [`screenshots/`](https://github.com/UiPath/graphtty/tree/main/screenshots) directory.
+
 ## Quick start
 
 ```python
@@ -120,6 +122,11 @@ graphtty reads a simple JSON format:
   ]
 }
 ```
+
+## Related Projects
+
+- **[uipath-dev](https://github.com/UiPath/uipath-dev)** — Developer console for debugging and inspecting AI agents
+- **[uipath-python](https://github.com/UiPath/uipath-python)** — Python SDK and CLI to build, test, and deploy AI agents
 
 ## Acknowledgements
 
