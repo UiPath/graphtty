@@ -178,6 +178,21 @@ def main():
             "solarized",
             "World Map (solarized)",
         ),
+        (
+            "samples/rag-pipeline/graph.json",
+            "dracula",
+            "RAG Pipeline (dracula)",
+        ),
+        (
+            "samples/code-review/graph.json",
+            "ocean",
+            "Code Review Multi-Agent (ocean)",
+        ),
+        (
+            "samples/etl-pipeline/graph.json",
+            "forest",
+            "ETL Data Pipeline (forest)",
+        ),
     ]
 
     images: list[tuple[str, Image.Image]] = []

@@ -1,0 +1,96 @@
+{
+  "nodes": [
+    { "id": "__start__", "name": "__start__", "type": "node" },
+    {
+      "id": "api_ingest",
+      "name": "API Ingestion",
+      "type": "tool",
+      "metadata": { "tool_names": ["rest_client", "graphql_client"] },
+      "description": "Pulls data from REST and GraphQL endpoints"
+    },
+    {
+      "id": "db_ingest",
+      "name": "DB Ingestion",
+      "type": "tool",
+      "metadata": { "tool_names": ["postgres_connector"] },
+      "description": "Extracts rows from PostgreSQL source tables"
+    },
+    {
+      "id": "file_ingest",
+      "name": "File Ingestion",
+      "type": "tool",
+      "metadata": { "tool_names": ["s3_reader", "csv_parser"] },
+      "description": "Reads CSV/Parquet files from S3 buckets"
+    },
+    {
+      "id": "schema_validator",
+      "name": "Schema Validator",
+      "type": "node",
+      "description": "Validates incoming records against expected schemas"
+    },
+    {
+      "id": "deduplicator",
+      "name": "Deduplicator",
+      "type": "node",
+      "description": "Removes duplicate records using composite key hashing"
+    },
+    {
+      "id": "normalizer",
+      "name": "Normalizer",
+      "type": "node",
+      "description": "Standardizes dates, currencies, and text encodings"
+    },
+    {
+      "id": "enrichment",
+      "name": "AI Enrichment",
+      "type": "model",
+      "metadata": { "model_name": "claude-haiku-4-5" },
+      "description": "Classifies, tags, and extracts entities from text fields"
+    },
+    {
+      "id": "quality_gate",
+      "name": "Quality Gate",
+      "type": "node",
+      "description": "Checks completeness, freshness, and anomaly thresholds"
+    },
+    {
+      "id": "warehouse_load",
+      "name": "Warehouse Load",
+      "type": "tool",
+      "metadata": { "tool_names": ["bigquery_writer"] },
+      "description": "Bulk loads transformed data into BigQuery tables"
+    },
+    {
+      "id": "cache_sync",
+      "name": "Cache Sync",
+      "type": "tool",
+      "metadata": { "tool_names": ["redis_writer"] },
+      "description": "Updates Redis cache with latest aggregated views"
+    },
+    {
+      "id": "alerting",
+      "name": "Alerting",
+      "type": "node",
+      "description": "Sends Slack/PagerDuty alerts on quality failures"
+    },
+    { "id": "__end__", "name": "__end__", "type": "__end__" }
+  ],
+  "edges": [
+    { "source": "__start__", "target": "api_ingest" },
+    { "source": "__start__", "target": "db_ingest" },
+    { "source": "__start__", "target": "file_ingest" },
+    { "source": "api_ingest", "target": "schema_validator" },
+    { "source": "db_ingest", "target": "schema_validator" },
+    { "source": "file_ingest", "target": "schema_validator" },
+    { "source": "schema_validator", "target": "deduplicator" },
+    { "source": "deduplicator", "target": "normalizer" },
+    { "source": "normalizer", "target": "enrichment" },
+    { "source": "enrichment", "target": "quality_gate" },
+    { "source": "quality_gate", "target": "warehouse_load" },
+    { "source": "quality_gate", "target": "cache_sync" },
+    { "source": "quality_gate", "target": "alerting", "label": "on failure" },
+    { "source": "warehouse_load", "target": "__end__" },
+    { "source": "cache_sync", "target": "__end__" },
+    { "source": "alerting", "target": "__end__" }
+  ]
+}

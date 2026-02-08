@@ -1,7 +1,7 @@
 [project]
 name = "graphtty"
-version = "0.0.5"
-description = "Render directed graphs as ASCII/Unicode art for console output"
+version = "0.1.0"
+description = "Turn any directed graph into colored ASCII art for your terminal"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
@@ -19,6 +19,7 @@ maintainers = [
 
 [project.urls]
 Repository = "https://github.com/uipath/graphtty"
+Documentation = "https://uipath.github.io/uipath-python/"
 
 [project.scripts]
 graphtty = "graphtty.__main__:main"
