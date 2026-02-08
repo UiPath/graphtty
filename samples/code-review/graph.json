@@ -1,0 +1,126 @@
+{
+  "nodes": [
+    { "id": "__start__", "name": "__start__", "type": "node" },
+    {
+      "id": "diff_parser",
+      "name": "Diff Parser",
+      "type": "node",
+      "description": "Parses git diff into per-file change hunks with context"
+    },
+    {
+      "id": "security_reviewer",
+      "name": "Security Reviewer",
+      "type": "model",
+      "description": "OWASP top-10, secrets detection, dependency vulns",
+      "subgraph": {
+        "nodes": [
+          { "id": "__start__", "name": "__start__", "type": "node" },
+          {
+            "id": "model",
+            "name": "Security LLM",
+            "type": "model",
+            "metadata": { "model_name": "claude-sonnet-4-5-20250929" }
+          },
+          {
+            "id": "tools",
+            "name": "Security Tools",
+            "type": "tool",
+            "metadata": { "tool_names": ["semgrep_scan", "trufflehog", "osv_check"] }
+          },
+          { "id": "__end__", "name": "__end__", "type": "__end__" }
+        ],
+        "edges": [
+          { "source": "__start__", "target": "model" },
+          { "source": "model", "target": "__end__" },
+          { "source": "model", "target": "tools" },
+          { "source": "tools", "target": "model" }
+        ]
+      }
+    },
+    {
+      "id": "style_reviewer",
+      "name": "Style Reviewer",
+      "type": "model",
+      "description": "Linting, formatting, naming conventions, code style",
+      "subgraph": {
+        "nodes": [
+          { "id": "__start__", "name": "__start__", "type": "node" },
+          {
+            "id": "model",
+            "name": "Style LLM",
+            "type": "model",
+            "metadata": { "model_name": "claude-haiku-4-5" }
+          },
+          {
+            "id": "tools",
+            "name": "Lint Tools",
+            "type": "tool",
+            "metadata": { "tool_names": ["ruff_check", "eslint", "prettier_diff"] }
+          },
+          { "id": "__end__", "name": "__end__", "type": "__end__" }
+        ],
+        "edges": [
+          { "source": "__start__", "target": "model" },
+          { "source": "model", "target": "__end__" },
+          { "source": "model", "target": "tools" },
+          { "source": "tools", "target": "model" }
+        ]
+      }
+    },
+    {
+      "id": "logic_reviewer",
+      "name": "Logic Reviewer",
+      "type": "model",
+      "description": "Correctness, edge cases, race conditions, error handling",
+      "subgraph": {
+        "nodes": [
+          { "id": "__start__", "name": "__start__", "type": "node" },
+          {
+            "id": "model",
+            "name": "Logic LLM",
+            "type": "model",
+            "metadata": { "model_name": "claude-sonnet-4-5-20250929" }
+          },
+          {
+            "id": "tools",
+            "name": "Analysis Tools",
+            "type": "tool",
+            "metadata": { "tool_names": ["ast_analyzer", "test_runner", "coverage_check"] }
+          },
+          { "id": "__end__", "name": "__end__", "type": "__end__" }
+        ],
+        "edges": [
+          { "source": "__start__", "target": "model" },
+          { "source": "model", "target": "__end__" },
+          { "source": "model", "target": "tools" },
+          { "source": "tools", "target": "model" }
+        ]
+      }
+    },
+    {
+      "id": "aggregator",
+      "name": "Finding Aggregator",
+      "type": "node",
+      "description": "Deduplicates, ranks by severity, merges overlapping findings"
+    },
+    {
+      "id": "report_generator",
+      "name": "Report Generator",
+      "type": "model",
+      "metadata": { "model_name": "claude-sonnet-4-5-20250929" },
+      "description": "Produces structured review with inline comments and summary"
+    },
+    { "id": "__end__", "name": "__end__", "type": "__end__" }
+  ],
+  "edges": [
+    { "source": "__start__", "target": "diff_parser" },
+    { "source": "diff_parser", "target": "security_reviewer" },
+    { "source": "diff_parser", "target": "style_reviewer" },
+    { "source": "diff_parser", "target": "logic_reviewer" },
+    { "source": "security_reviewer", "target": "aggregator" },
+    { "source": "style_reviewer", "target": "aggregator" },
+    { "source": "logic_reviewer", "target": "aggregator" },
+    { "source": "aggregator", "target": "report_generator" },
+    { "source": "report_generator", "target": "__end__" }
+  ]
+}

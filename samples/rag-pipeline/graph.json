@@ -1,0 +1,75 @@
+{
+  "nodes": [
+    { "id": "__start__", "name": "__start__", "type": "node" },
+    {
+      "id": "query_analyzer",
+      "name": "Query Analyzer",
+      "type": "model",
+      "metadata": { "model_name": "claude-sonnet-4-5-20250929" },
+      "description": "Classifies intent, extracts entities, rewrites query for retrieval"
+    },
+    {
+      "id": "vector_search",
+      "name": "Vector Search",
+      "type": "tool",
+      "metadata": { "tool_names": ["pinecone_search"] },
+      "description": "Semantic similarity search over embedded document chunks"
+    },
+    {
+      "id": "keyword_search",
+      "name": "Keyword Search",
+      "type": "tool",
+      "metadata": { "tool_names": ["elasticsearch_bm25"] },
+      "description": "BM25 lexical search for exact term matches"
+    },
+    {
+      "id": "web_search",
+      "name": "Web Search",
+      "type": "tool",
+      "metadata": { "tool_names": ["tavily_search"] },
+      "description": "Live web search for recent or missing information"
+    },
+    {
+      "id": "reranker",
+      "name": "Reranker",
+      "type": "model",
+      "metadata": { "model_name": "cohere-rerank-v3" },
+      "description": "Cross-encoder reranking of merged retrieval results"
+    },
+    {
+      "id": "context_builder",
+      "name": "Context Builder",
+      "type": "node",
+      "description": "Assembles top-k passages into structured prompt context"
+    },
+    {
+      "id": "generator",
+      "name": "Generator",
+      "type": "model",
+      "metadata": { "model_name": "claude-sonnet-4-5-20250929", "max_tokens": 8192 },
+      "description": "Generates grounded answer from retrieved context"
+    },
+    {
+      "id": "hallucination_check",
+      "name": "Hallucination Check",
+      "type": "model",
+      "metadata": { "model_name": "claude-haiku-4-5" },
+      "description": "Validates claims against source passages, flags unsupported statements"
+    },
+    { "id": "__end__", "name": "__end__", "type": "__end__" }
+  ],
+  "edges": [
+    { "source": "__start__", "target": "query_analyzer" },
+    { "source": "query_analyzer", "target": "vector_search" },
+    { "source": "query_analyzer", "target": "keyword_search" },
+    { "source": "query_analyzer", "target": "web_search" },
+    { "source": "vector_search", "target": "reranker" },
+    { "source": "keyword_search", "target": "reranker" },
+    { "source": "web_search", "target": "reranker" },
+    { "source": "reranker", "target": "context_builder" },
+    { "source": "context_builder", "target": "generator" },
+    { "source": "generator", "target": "hallucination_check" },
+    { "source": "hallucination_check", "target": "__end__" },
+    { "source": "hallucination_check", "target": "generator", "label": "retry" }
+  ]
+}
