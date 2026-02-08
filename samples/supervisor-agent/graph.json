@@ -1,0 +1,220 @@
+{
+  "nodes": [
+    {
+      "id": "__start__",
+      "name": "__start__",
+      "type": "node",
+      "subgraph": null,
+      "metadata": {}
+    },
+    {
+      "id": "input",
+      "name": "input",
+      "type": "node",
+      "subgraph": null,
+      "metadata": {}
+    },
+    {
+      "id": "supervisor",
+      "name": "supervisor",
+      "type": "model",
+      "subgraph": null,
+      "metadata": {
+        "model_name": "claude-3-7-sonnet-latest",
+        "max_tokens": 64000
+      }
+    },
+    {
+      "id": "researcher",
+      "name": "researcher",
+      "type": "node",
+      "subgraph": {
+        "nodes": [
+          {
+            "id": "__start__",
+            "name": "__start__",
+            "type": "node",
+            "subgraph": null,
+            "metadata": {}
+          },
+          {
+            "id": "model",
+            "name": "model",
+            "type": "model",
+            "subgraph": null,
+            "metadata": {
+              "model_name": "claude-3-7-sonnet-latest",
+              "max_tokens": 64000
+            }
+          },
+          {
+            "id": "tools",
+            "name": "tools",
+            "type": "tool",
+            "subgraph": null,
+            "metadata": {
+              "tool_names": [
+                "tavily_search"
+              ],
+              "tool_count": 1
+            }
+          },
+          {
+            "id": "__end__",
+            "name": "__end__",
+            "type": "node",
+            "subgraph": null,
+            "metadata": {}
+          }
+        ],
+        "edges": [
+          {
+            "source": "__start__",
+            "target": "model",
+            "label": null
+          },
+          {
+            "source": "model",
+            "target": "__end__",
+            "label": null
+          },
+          {
+            "source": "model",
+            "target": "tools",
+            "label": null
+          },
+          {
+            "source": "tools",
+            "target": "model",
+            "label": null
+          }
+        ]
+      },
+      "metadata": {}
+    },
+    {
+      "id": "coder",
+      "name": "coder",
+      "type": "node",
+      "subgraph": {
+        "nodes": [
+          {
+            "id": "__start__",
+            "name": "__start__",
+            "type": "node",
+            "subgraph": null,
+            "metadata": {}
+          },
+          {
+            "id": "model",
+            "name": "model",
+            "type": "model",
+            "subgraph": null,
+            "metadata": {
+              "model_name": "claude-3-7-sonnet-latest",
+              "max_tokens": 64000
+            }
+          },
+          {
+            "id": "tools",
+            "name": "tools",
+            "type": "tool",
+            "subgraph": null,
+            "metadata": {
+              "tool_names": [
+                "python_repl_tool"
+              ],
+              "tool_count": 1
+            }
+          },
+          {
+            "id": "__end__",
+            "name": "__end__",
+            "type": "node",
+            "subgraph": null,
+            "metadata": {}
+          }
+        ],
+        "edges": [
+          {
+            "source": "__start__",
+            "target": "model",
+            "label": null
+          },
+          {
+            "source": "model",
+            "target": "__end__",
+            "label": null
+          },
+          {
+            "source": "model",
+            "target": "tools",
+            "label": null
+          },
+          {
+            "source": "tools",
+            "target": "model",
+            "label": null
+          }
+        ]
+      },
+      "metadata": {}
+    },
+    {
+      "id": "output",
+      "name": "output",
+      "type": "node",
+      "subgraph": null,
+      "metadata": {}
+    },
+    {
+      "id": "__end__",
+      "name": "__end__",
+      "type": "__end__",
+      "subgraph": null,
+      "metadata": {}
+    }
+  ],
+  "edges": [
+    {
+      "source": "__start__",
+      "target": "input",
+      "label": null
+    },
+    {
+      "source": "coder",
+      "target": "supervisor",
+      "label": null
+    },
+    {
+      "source": "input",
+      "target": "supervisor",
+      "label": null
+    },
+    {
+      "source": "researcher",
+      "target": "supervisor",
+      "label": null
+    },
+    {
+      "source": "supervisor",
+      "target": "coder",
+      "label": null
+    },
+    {
+      "source": "supervisor",
+      "target": "output",
+      "label": "__end__"
+    },
+    {
+      "source": "supervisor",
+      "target": "researcher",
+      "label": null
+    },
+    {
+      "source": "output",
+      "target": "__end__",
+      "label": null
+    }
+  ]
+}

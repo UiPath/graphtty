@@ -1,0 +1,101 @@
+[project]
+name = "graphtty"
+version = "0.0.5"
+description = "Render directed graphs as ASCII/Unicode art for console output"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = ["grandalf==0.8", "pydantic>=2.0"]
+classifiers = [
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Build Tools",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+maintainers = [
+  { name = "Cristian Pufu", email = "cristian.pufu@uipath.com" },
+]
+
+[project.urls]
+Repository = "https://github.com/uipath/graphtty"
+
+[project.scripts]
+graphtty = "graphtty.__main__:main"
+
+[dependency-groups]
+dev = [
+  "mypy>=1.19.1",
+  "ruff>=0.15.0",
+  "rust-just>=1.46.0",
+  "pytest>=9.0.2",
+  "pytest-cov>=4.1.0",
+  "pillow>=12.1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/graphtty"]
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+exclude = ["samples/**", "testcases/**"]
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "D"]
+ignore = ["D417"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+ignore-decorators = []
+
+[tool.ruff.lint.per-file-ignores]
+"*" = ["E501"]
+"tests/**" = ["D"]
+"*_test.py" = ["D"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+mypy_path = "src"
+exclude = ["samples/"]
+explicit_package_bases = true
+namespace_packages = true
+follow_imports = "silent"
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = true
+check_untyped_defs = true
+no_implicit_reexport = true
+disallow_untyped_defs = false
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-ra -q --cov=src/graphtty --cov-report=term-missing"
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.coverage.run]
+source = ["src"]
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true

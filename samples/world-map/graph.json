@@ -1,0 +1,35 @@
+{
+  "nodes": [
+    { "id": "us", "name": "United States", "type": "hub", "description": "North America" },
+    { "id": "ca", "name": "Canada", "type": "country", "description": "North America" },
+    { "id": "mx", "name": "Mexico", "type": "country", "description": "Central America" },
+    { "id": "br", "name": "Brazil", "type": "country", "description": "South America" },
+    { "id": "uk", "name": "United Kingdom", "type": "hub", "description": "Europe" },
+    { "id": "de", "name": "Germany", "type": "country", "description": "Europe" },
+    { "id": "fr", "name": "France", "type": "country", "description": "Europe" },
+    { "id": "ae", "name": "UAE", "type": "hub", "description": "Middle East" },
+    { "id": "ng", "name": "Nigeria", "type": "country", "description": "West Africa" },
+    { "id": "za", "name": "South Africa", "type": "country", "description": "Southern Africa" },
+    { "id": "in", "name": "India", "type": "country", "description": "South Asia" },
+    { "id": "cn", "name": "China", "type": "hub", "description": "East Asia" },
+    { "id": "jp", "name": "Japan", "type": "country", "description": "East Asia" },
+    { "id": "kr", "name": "South Korea", "type": "country", "description": "East Asia" },
+    { "id": "au", "name": "Australia", "type": "country", "description": "Oceania" }
+  ],
+  "edges": [
+    { "source": "us", "target": "uk" },
+    { "source": "us", "target": "cn" },
+    { "source": "us", "target": "ca" },
+    { "source": "us", "target": "mx" },
+    { "source": "mx", "target": "br" },
+    { "source": "uk", "target": "de" },
+    { "source": "uk", "target": "fr" },
+    { "source": "uk", "target": "ae" },
+    { "source": "ae", "target": "in" },
+    { "source": "ae", "target": "ng" },
+    { "source": "ng", "target": "za" },
+    { "source": "cn", "target": "jp" },
+    { "source": "cn", "target": "kr" },
+    { "source": "cn", "target": "au" }
+  ]
+}

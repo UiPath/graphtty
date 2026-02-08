@@ -1,0 +1,112 @@
+{
+  "nodes": [
+    {
+      "id": "__start__",
+      "name": "__start__",
+      "type": "node",
+      "subgraph": null,
+      "metadata": {}
+    },
+    {
+      "id": "model",
+      "name": "model",
+      "type": "model",
+      "subgraph": null,
+      "metadata": {
+        "model_name": "claude-haiku-4-5",
+        "max_tokens": 64000
+      }
+    },
+    {
+      "id": "tools",
+      "name": "tools",
+      "type": "tool",
+      "subgraph": null,
+      "metadata": {
+        "tool_names": [
+          "write_todos",
+          "ls",
+          "read_file",
+          "write_file",
+          "edit_file",
+          "glob",
+          "grep",
+          "execute",
+          "task",
+          "tavily_search"
+        ],
+        "tool_count": 10
+      }
+    },
+    {
+      "id": "TodoListMiddleware.after_model",
+      "name": "TodoListMiddleware.after_model",
+      "type": "node",
+      "subgraph": null,
+      "metadata": {}
+    },
+    {
+      "id": "SummarizationMiddleware.before_model",
+      "name": "SummarizationMiddleware.before_model",
+      "type": "node",
+      "subgraph": null,
+      "metadata": {}
+    },
+    {
+      "id": "PatchToolCallsMiddleware.before_agent",
+      "name": "PatchToolCallsMiddleware.before_agent",
+      "type": "node",
+      "subgraph": null,
+      "metadata": {}
+    },
+    {
+      "id": "__end__",
+      "name": "__end__",
+      "type": "node",
+      "subgraph": null,
+      "metadata": {}
+    }
+  ],
+  "edges": [
+    {
+      "source": "PatchToolCallsMiddleware.before_agent",
+      "target": "SummarizationMiddleware.before_model",
+      "label": null
+    },
+    {
+      "source": "SummarizationMiddleware.before_model",
+      "target": "model",
+      "label": null
+    },
+    {
+      "source": "TodoListMiddleware.after_model",
+      "target": "SummarizationMiddleware.before_model",
+      "label": null
+    },
+    {
+      "source": "TodoListMiddleware.after_model",
+      "target": "__end__",
+      "label": null
+    },
+    {
+      "source": "TodoListMiddleware.after_model",
+      "target": "tools",
+      "label": null
+    },
+    {
+      "source": "__start__",
+      "target": "PatchToolCallsMiddleware.before_agent",
+      "label": null
+    },
+    {
+      "source": "model",
+      "target": "TodoListMiddleware.after_model",
+      "label": null
+    },
+    {
+      "source": "tools",
+      "target": "SummarizationMiddleware.before_model",
+      "label": null
+    }
+  ]
+}

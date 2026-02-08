@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv run pytest:*)",
+      "Bash(uv run python:*)",
+      "Bash(PYTHONIOENCODING=utf-8 uv run python:*)",
+      "Bash(pip show:*)",
+      "Bash(dir:*)",
+      "Bash(where python:*)",
+      "Bash(pip install:*)",
+      "Bash($env:PYTHONIOENCODING=\"utf-8\")",
+      "Bash(PYTHONIOENCODING=utf-8 uv run:*)",
+      "Bash(set:*)",
+      "Bash(uv run:*)",
+      "Bash(uv pip install:*)",
+      "WebSearch",
+      "WebFetch(domain:*)",
+      "Bash(git clone:*)",
+      "Bash(python:*)"
+    ]
+  }
+}
