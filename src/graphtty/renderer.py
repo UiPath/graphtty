@@ -166,8 +166,15 @@ def _do_render_canvas(
     # 3. Layout
     boxes = _sugiyama_layout(graph.nodes, graph.edges, node_sizes, options.padding)
 
-    # 4. Determine canvas size — account for backward-edge corridors
+    # 4. Determine canvas size — account for edge corridors
     corridor_map, extra_right = _backward_edge_corridors(graph.edges, boxes)
+    # Forward skip-layer corridors (placed after backward corridors)
+    min_fwd = (max(corridor_map.values()) + 3) if corridor_map else 0
+    fwd_map, fwd_extra = _forward_skip_corridors(
+        graph.edges, boxes, min_route_x=min_fwd
+    )
+    corridor_map.update(fwd_map)
+    extra_right = max(extra_right, fwd_extra)
     max_x = max(b.x + b.w for b in boxes.values()) + extra_right + options.padding
     max_y = max(b.y + b.h for b in boxes.values()) + options.padding
     canvas = Canvas(max_x, max_y)
@@ -334,7 +341,84 @@ def _backward_edge_corridors(
         return corridor_map, 0
 
     max_route_x = max(corridor_map.values())
-    margin = max(0, max_route_x - global_max_right + 3)
+    # Account for label width on backward corridors
+    max_label_w = 0
+    for idx in corridor_map:
+        lbl = edges[idx].label
+        if lbl:
+            max_label_w = max(max_label_w, len(lbl) + 2)  # +2 gap
+    margin = max(0, max_route_x + max_label_w - global_max_right + 3)
+    return corridor_map, margin
+
+
+def _forward_skip_corridors(
+    edges: list[AsciiEdge],
+    boxes: dict[str, Box],
+    min_route_x: int = 0,
+) -> tuple[dict[int, int], int]:
+    """Compute route_x corridors for forward edges that skip layers.
+
+    Forward edges whose straight vertical path passes through an intermediate
+    box are re-routed through a right-side corridor, similar to backward edges.
+
+    Returns ``(corridor_map, margin)`` — same shape as backward corridors.
+    """
+    all_boxes = list(boxes.values())
+    global_max_right = max((b.x + b.w for b in all_boxes), default=0)
+    corridor_map: dict[int, int] = {}
+    slot = 0
+    for idx, edge in enumerate(edges):
+        src = boxes.get(edge.source)
+        tgt = boxes.get(edge.target)
+        if src is None or tgt is None:
+            continue
+        if src.bottom >= tgt.top:
+            continue  # not a forward edge
+
+        src_cx = src.cx
+        tgt_cx = tgt.cx
+        if abs(src_cx - tgt_cx) > _STRAIGHT_TOLERANCE:
+            continue  # Z-shape edges unlikely to collide with intermediate boxes
+
+        edge_x = tgt_cx  # straight edges align to target centre
+        src_bottom = src.bottom
+        tgt_top = tgt.top
+        # Check if vertical at edge_x passes through any intermediate box
+        collides = False
+        local_max_right = 0
+        for b in all_boxes:
+            if b is src or b is tgt:
+                continue
+            # Box must be vertically between src and tgt
+            b_bottom = b.y + b.h
+            if b_bottom <= src_bottom or b.y >= tgt_top:
+                continue
+            b_right = b.x + b.w
+            # Box must horizontally contain the edge x
+            if b.x <= edge_x < b_right:
+                collides = True
+            # Track rightmost box in the vertical span for corridor placement
+            if b_right > local_max_right:
+                local_max_right = b_right
+
+        if collides:
+            route_x = max(local_max_right + 3, min_route_x) + slot * 3
+            corridor_map[idx] = route_x
+            slot += 1
+
+    if not corridor_map:
+        return corridor_map, 0
+
+    max_route_x = max(corridor_map.values())
+    # Account for label width on forward corridors
+    max_label_w = 0
+    for idx in corridor_map:
+        lbl = edges[idx].label
+        if lbl:
+            lbl_w = len(lbl) + 2  # +2 gap
+            if lbl_w > max_label_w:
+                max_label_w = lbl_w
+    margin = max(0, max_route_x + max_label_w - global_max_right + 3)
     return corridor_map, margin
 
 
@@ -365,6 +449,8 @@ def _draw_edge(
             ch,
             edge_color=color,
             label_color=label_color,
+            route_x=route_x,
+            all_boxes=all_boxes,
         )
     elif tgt.bottom < src.top:
         _draw_backward_edge(
@@ -399,8 +485,24 @@ def _draw_forward_edge(
     *,
     edge_color: str | None = None,
     label_color: str | None = None,
+    route_x: int | None = None,
+    all_boxes: dict[str, Box] | None = None,
 ) -> None:
     """Source is above target — connect bottom-centre to top-centre."""
+    if route_x is not None:
+        _draw_forward_corridor(
+            canvas,
+            src,
+            tgt,
+            label,
+            ch,
+            route_x=route_x,
+            edge_color=edge_color,
+            label_color=label_color,
+            all_boxes=all_boxes,
+        )
+        return
+
     src_cx = src.cx
     tgt_cx = tgt.cx
     start_y = src.bottom
@@ -471,6 +573,105 @@ def _draw_forward_edge(
 
         # Arrow above target box
         canvas.put(tgt_cx, arrow_y, ch["arrow_down"], edge_color)
+
+
+def _draw_forward_corridor(
+    canvas: Canvas,
+    src: Box,
+    tgt: Box,
+    label: str | None,
+    ch: dict[str, str],
+    *,
+    route_x: int,
+    edge_color: str | None = None,
+    label_color: str | None = None,
+    all_boxes: dict[str, Box] | None = None,
+) -> None:
+    """Draw a forward edge routed through a right-side corridor.
+
+    Used when the straight vertical path would collide with intermediate boxes.
+    Routes: src ┬ → down → └──┐ corridor │ ┘──┌ → down → ▼ tgt
+    """
+    src_cx = src.cx
+    tgt_cx = tgt.cx
+    start_y = src.bottom
+    end_y = tgt.top
+
+    top_horiz_y = start_y + 2
+    bot_horiz_y = end_y - 2
+    # Safety clamp
+    if top_horiz_y >= bot_horiz_y:
+        mid = (start_y + end_y) // 2
+        top_horiz_y = mid
+        bot_horiz_y = mid + 1
+
+    arrow_y = end_y - 1 if end_y - 1 > start_y else end_y
+
+    # Pre-compute occupied intervals for the two horizontal rows
+    top_intervals: list[tuple[int, int]] = []
+    bot_intervals: list[tuple[int, int]] = []
+    if all_boxes:
+        top_intervals = _x_intervals_at_y(top_horiz_y, all_boxes, src, tgt)
+        bot_intervals = _x_intervals_at_y(bot_horiz_y, all_boxes, src, tgt)
+
+    # Direct array access for performance
+    rows = canvas._rows
+    colors = canvas._colors
+    ch_v = ch["v"]
+    ch_h = ch["h"]
+
+    # 1. Junction at source bottom
+    canvas.put(src_cx, start_y, ch["jt"], edge_color)
+
+    # 2. Vertical from source down to top_horiz_y
+    for y in range(start_y + 1, top_horiz_y):
+        rows[y][src_cx] = ch_v
+        if edge_color is not None:
+            colors[y][src_cx] = edge_color
+
+    # 3. Corner └ at (src_cx, top_horiz_y), horizontal to route_x, corner ┐
+    canvas.put(src_cx, top_horiz_y, ch["bl"], edge_color)
+    top_row = rows[top_horiz_y]
+    top_color_row = colors[top_horiz_y]
+    for x in range(src_cx + 1, route_x):
+        if top_intervals and _x_in_intervals(x, top_intervals):
+            continue
+        top_row[x] = ch_h
+        if edge_color is not None:
+            top_color_row[x] = edge_color
+    canvas.put(route_x, top_horiz_y, ch["tr"], edge_color)
+
+    # 4. Vertical down corridor
+    for y in range(top_horiz_y + 1, bot_horiz_y):
+        rows[y][route_x] = ch_v
+        if edge_color is not None:
+            colors[y][route_x] = edge_color
+
+    # 5. Corner ┘ at (route_x, bot_horiz_y), horizontal back to tgt_cx, corner ┌
+    canvas.put(route_x, bot_horiz_y, ch["br"], edge_color)
+    bot_row = rows[bot_horiz_y]
+    bot_color_row = colors[bot_horiz_y]
+    for x in range(tgt_cx + 1, route_x):
+        if bot_intervals and _x_in_intervals(x, bot_intervals):
+            continue
+        bot_row[x] = ch_h
+        if edge_color is not None:
+            bot_color_row[x] = edge_color
+    canvas.put(tgt_cx, bot_horiz_y, ch["tl"], edge_color)
+
+    # 6. Vertical down to arrow
+    for y in range(bot_horiz_y + 1, arrow_y):
+        rows[y][tgt_cx] = ch_v
+        if edge_color is not None:
+            colors[y][tgt_cx] = edge_color
+
+    # 7. Arrow above target box
+    canvas.put(tgt_cx, arrow_y, ch["arrow_down"], edge_color)
+
+    # 8. Label alongside corridor vertical
+    if label:
+        label_y = (top_horiz_y + bot_horiz_y) // 2
+        canvas.puts(route_x + 2, label_y, label, label_color)
 
 
 def _x_intervals_at_y(
