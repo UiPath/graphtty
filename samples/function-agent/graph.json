@@ -1,0 +1,104 @@
+{
+    "nodes": [
+        {
+            "id": "__start__",
+            "name": "__start__",
+            "type": "__start__",
+            "subgraph": null
+        },
+        {
+            "id": "aggregate_tool_results",
+            "name": "aggregate_tool_results",
+            "type": "tool",
+            "subgraph": null
+        },
+        {
+            "id": "call_tool",
+            "name": "call_tool",
+            "type": "tool",
+            "subgraph": null
+        },
+        {
+            "id": "init_run",
+            "name": "init_run",
+            "type": "node",
+            "subgraph": null
+        },
+        {
+            "id": "parse_agent_output",
+            "name": "parse_agent_output",
+            "type": "node",
+            "subgraph": null
+        },
+        {
+            "id": "run_agent_step",
+            "name": "run_agent_step",
+            "type": "model",
+            "subgraph": null
+        },
+        {
+            "id": "setup_agent",
+            "name": "setup_agent",
+            "type": "node",
+            "subgraph": null
+        },
+        {
+            "id": "__end__",
+            "name": "__end__",
+            "type": "__end__",
+            "subgraph": null
+        }
+    ],
+    "edges": [
+        {
+            "source": "aggregate_tool_results",
+            "target": "setup_agent",
+            "label": "AgentInput"
+        },
+        {
+            "source": "aggregate_tool_results",
+            "target": "__end__",
+            "label": "StopEvent"
+        },
+        {
+            "source": "call_tool",
+            "target": "aggregate_tool_results",
+            "label": "ToolCallResult"
+        },
+        {
+            "source": "__start__",
+            "target": "init_run",
+            "label": "AgentWorkflowStartEvent"
+        },
+        {
+            "source": "init_run",
+            "target": "setup_agent",
+            "label": "AgentInput"
+        },
+        {
+            "source": "parse_agent_output",
+            "target": "__end__",
+            "label": "StopEvent"
+        },
+        {
+            "source": "parse_agent_output",
+            "target": "setup_agent",
+            "label": "AgentInput"
+        },
+        {
+            "source": "parse_agent_output",
+            "target": "call_tool",
+            "label": "ToolCall"
+        },
+        {
+            "source": "run_agent_step",
+            "target": "parse_agent_output",
+            "label": "AgentOutput"
+        },
+        {
+            "source": "setup_agent",
+            "target": "run_agent_step",
+            "label": "AgentSetup"
+        }
+    ]
+}

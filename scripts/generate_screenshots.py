@@ -193,6 +193,11 @@ def main():
             "forest",
             "ETL Data Pipeline (forest)",
         ),
+        (
+            "samples/function-agent/graph.json",
+            "monokai",
+            "Function Agent (monokai)",
+        ),
     ]
 
     images: list[tuple[str, Image.Image]] = []

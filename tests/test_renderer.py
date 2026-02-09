@@ -343,3 +343,63 @@ class TestRenderComplexGraphs:
         assert "Top" in result
         assert "Mid" in result
         assert "Deep" in result
+
+
+class TestForwardSkipLayerEdges:
+    def test_skip_edge_does_not_overwrite_intermediate_nodes(self):
+        """A→D skip edge should not corrupt intermediate node B or C text."""
+        g = AsciiGraph(
+            nodes=[
+                _node("a", "Alpha", "entry"),
+                _node("b", "Bravo", "action"),
+                _node("c", "Charlie", "action"),
+                _node("d", "Delta", "exit"),
+            ],
+            edges=[
+                _edge("a", "b"),
+                _edge("b", "c"),
+                _edge("c", "d"),
+                _edge("a", "d"),  # skip edge: jumps over B and C
+            ],
+        )
+        result = render(g)
+        # All node names must remain intact (not overwritten by edge chars)
+        assert "Alpha" in result
+        assert "Bravo" in result
+        assert "Charlie" in result
+        assert "Delta" in result
+
+    def test_skip_edge_with_label(self):
+        """Skip edge label should be rendered."""
+        g = AsciiGraph(
+            nodes=[
+                _node("a", "Start", "entry"),
+                _node("b", "Mid", "action"),
+                _node("c", "End", "exit"),
+            ],
+            edges=[
+                _edge("a", "b"),
+                _edge("b", "c"),
+                _edge("a", "c", label="skip"),  # skip edge with label
+            ],
+        )
+        result = render(g)
+        assert "Start" in result
+        assert "Mid" in result
+        assert "End" in result
+        assert "skip" in result
+
+    def test_function_agent_sample(self):
+        """The function-agent sample should render all node names intact."""
+        import json
+        from pathlib import Path
+
+        sample = (
+            Path(__file__).parent.parent / "samples" / "function-agent" / "graph.json"
+        )
+        if not sample.exists():
+            return  # skip if sample not available
+        data = json.loads(sample.read_text(encoding="utf-8"))
+        result = render(data)
+        for node in data["nodes"]:
+            assert node["name"] in result, f"Node '{node['name']}' missing from render"
