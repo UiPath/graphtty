@@ -107,16 +107,15 @@ class Canvas:
         end = min(len(text), self.width - x)
         if start >= end:
             return
-        row = self._rows[y]
         x0 = x + start
-        for i in range(start, end):
-            row[x + i] = text[i]
+        x1_idx = x + end
+        n = end - start
+        # C-level slice assignment instead of Python char-by-char loop
+        self._rows[y][x0:x1_idx] = list(text[start:end])
         if color is not None:
-            colors_row = self._colors[y]
-            for i in range(start, end):
-                colors_row[x + i] = color
+            self._colors[y][x0:x1_idx] = [color] * n
         # Update bounding box
-        x1 = x + end - 1
+        x1 = x1_idx - 1
         if x0 < self._bb_x0:
             self._bb_x0 = x0
         if x1 > self._bb_x1:
@@ -194,6 +193,7 @@ class Canvas:
             row = self._rows[y]
 
             # Find last non-space character — scan left from bb_x1 hint
+            # (bb_x1 is a hint; scan rightward just in case)
             last = min(bb_x1, len(row) - 1)
             while last >= 0 and row[last] == " ":
                 last -= 1
@@ -205,18 +205,19 @@ class Canvas:
             if not use_color:
                 lines.append("".join(row[: last + 1]))
             else:
-                # Batch consecutive same-color cells into runs
-                parts: list[str] = []
+                # Pre-join row once; use string slicing for color runs
+                end = last + 1
+                row_str = "".join(row[:end])
                 colors_row = self._colors[y]
+                parts: list[str] = []
                 current_color: str | None = None
                 run_start = 0
-                end = last + 1
                 for x in range(end):
                     cell_color = colors_row[x]
                     if cell_color != current_color:
-                        # Flush previous run
+                        # Flush previous run via string slice
                         if x > run_start:
-                            parts.append("".join(row[run_start:x]))
+                            parts.append(row_str[run_start:x])
                         if current_color is not None:
                             parts.append(RESET)
                         if cell_color is not None:
@@ -225,16 +226,19 @@ class Canvas:
                         run_start = x
                 # Flush final run
                 if end > run_start:
-                    parts.append("".join(row[run_start:end]))
+                    parts.append(row_str[run_start:end])
                 if current_color is not None:
                     parts.append(RESET)
                 lines.append("".join(parts))
 
-        while lines and not lines[-1]:
-            lines.pop()
-        while lines and not lines[0]:
-            lines.pop(0)
-        return "\n".join(lines)
+        # Trim leading/trailing empty lines — index-based (no O(n) pop(0))
+        trim_start = 0
+        while trim_start < len(lines) and not lines[trim_start]:
+            trim_start += 1
+        trim_end = len(lines)
+        while trim_end > trim_start and not lines[trim_end - 1]:
+            trim_end -= 1
+        return "\n".join(lines[trim_start:trim_end])
 
 
 @dataclass(slots=True)
@@ -283,39 +287,77 @@ def draw_box(
     x, y, w, h = box.x, box.y, box.w, box.h
     inner = w - 2  # width between borders
 
-    # Top border
+    rows = canvas._rows
+    color_rows = canvas._colors
+    ch_v = ch["v"]
+    ch_h = ch["h"]
+    x_end = x + w  # one past the right edge
+
+    # Top border — direct slice write
     if type_label and len(type_label) + 2 <= inner:
         # Embed type label: ┌ type ──┐
         fill = inner - len(type_label) - 2
-        top_str = ch["tl"] + " "
-        canvas.puts(x, y, top_str, border_color)
-        canvas.puts(x + len(top_str), y, type_label, type_color or border_color)
-        rest = " " + ch["h"] * fill + ch["tr"]
-        canvas.puts(x + len(top_str) + len(type_label), y, rest, border_color)
+        top_chars = list(ch["tl"] + " " + type_label + " " + ch_h * fill + ch["tr"])
+        rows[y][x:x_end] = top_chars
+        if border_color is not None:
+            color_rows[y][x:x_end] = [border_color] * w
+        # Override type label color region
+        tc = type_color or border_color
+        if tc is not None:
+            lbl_start = x + 2
+            lbl_end = lbl_start + len(type_label)
+            color_rows[y][lbl_start:lbl_end] = [tc] * len(type_label)
     else:
-        top = ch["tl"] + ch["h"] * inner + ch["tr"]
-        canvas.puts(x, y, top, border_color)
+        top_chars = list(ch["tl"] + ch_h * inner + ch["tr"])
+        rows[y][x:x_end] = top_chars
+        if border_color is not None:
+            color_rows[y][x:x_end] = [border_color] * w
 
-    # Content rows
+    # Content rows — direct writes
+    x_right = x + w - 1
     for i, text in enumerate(lines):
         row_y = y + 1 + i
+        row = rows[row_y]
+        # Left border
+        row[x] = ch_v
+        # Right border
+        row[x_right] = ch_v
+        # Content — centered
         pad_total = inner - len(text)
         pad_l = pad_total // 2
-        # Left border
-        canvas.put(x, row_y, ch["v"], border_color)
-        # Content
-        canvas.puts(x + 1 + pad_l, row_y, text, text_color)
-        # Right border
-        canvas.put(x + w - 1, row_y, ch["v"], border_color)
+        tx0 = x + 1 + pad_l
+        row[tx0 : tx0 + len(text)] = list(text)
+        if border_color is not None:
+            cr = color_rows[row_y]
+            cr[x] = border_color
+            cr[x_right] = border_color
+        if text_color is not None:
+            color_rows[row_y][tx0 : tx0 + len(text)] = [text_color] * len(text)
 
     # Fill any remaining inner rows (between content and bottom border)
     for ry in range(y + 1 + len(lines), y + h - 1):
-        canvas.put(x, ry, ch["v"], border_color)
-        canvas.put(x + w - 1, ry, ch["v"], border_color)
+        rows[ry][x] = ch_v
+        rows[ry][x_right] = ch_v
+        if border_color is not None:
+            color_rows[ry][x] = border_color
+            color_rows[ry][x_right] = border_color
 
-    # Bottom border
-    bot = ch["bl"] + ch["h"] * inner + ch["br"]
-    canvas.puts(x, y + h - 1, bot, border_color)
+    # Bottom border — direct slice write
+    bot_y = y + h - 1
+    bot_chars = list(ch["bl"] + ch_h * inner + ch["br"])
+    rows[bot_y][x:x_end] = bot_chars
+    if border_color is not None:
+        color_rows[bot_y][x:x_end] = [border_color] * w
+
+    # Update bounding box once for entire box
+    if x < canvas._bb_x0:
+        canvas._bb_x0 = x
+    if x_right > canvas._bb_x1:
+        canvas._bb_x1 = x_right
+    if y < canvas._bb_y0:
+        canvas._bb_y0 = y
+    if bot_y > canvas._bb_y1:
+        canvas._bb_y1 = bot_y
 
 
 def draw_hline(
