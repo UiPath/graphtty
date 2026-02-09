@@ -23,7 +23,13 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:python.igraph.org)",
+      "WebFetch(domain:igraph.org)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(cd:*)"
     ]
   }
 }

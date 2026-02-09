@@ -1,6 +1,7 @@
 """Layout and rendering engine for directed graphs.
 
-Uses grandalf (Sugiyama algorithm) for DAG layout and renders to ASCII/Unicode art.
+Uses a custom Sugiyama-style algorithm for DAG layout and renders to
+ASCII/Unicode art.
 """
 
 from __future__ import annotations
@@ -9,10 +10,8 @@ import textwrap
 from dataclasses import dataclass, field
 from typing import Any
 
-from grandalf.graphs import Edge, Graph, Vertex  # type: ignore[import-untyped]
-from grandalf.layouts import SugiyamaLayout  # type: ignore[import-untyped]
-
 from .canvas import UNICODE_CHARS, Box, Canvas, chars, draw_box, draw_vline
+from .layout import layout as _sugiyama_layout
 from .themes import DEFAULT as DEFAULT_THEME
 from .themes import Theme
 from .types import AsciiEdge, AsciiGraph, AsciiNode
@@ -63,21 +62,6 @@ def render(
     use_color = options.theme is not DEFAULT_THEME
     canvas = _render_canvas(graph, options)
     return canvas.to_string(use_color=use_color)
-
-
-def _canvas_visual_size(c: Canvas) -> tuple[int, int]:
-    """Return (width, height) of the non-space bounding box in *c*."""
-    w = 0
-    h = 0
-    for y in range(c.height):
-        row = c._rows[y]
-        rx = len(row) - 1
-        while rx >= 0 and row[rx] == " ":
-            rx -= 1
-        if rx >= 0:
-            h = y + 1
-            w = max(w, rx + 1)
-    return w, h
 
 
 def _render_canvas(
@@ -141,7 +125,7 @@ def _do_render_canvas(
         if node.id in subgraph_canvases:
             # Subgraph node: size from the canvas (NOT from string lengths)
             sub_canvas = subgraph_canvases[node.id]
-            sub_w, sub_h = _canvas_visual_size(sub_canvas)
+            sub_w, sub_h = sub_canvas.visual_size
 
             header_w = len(node.name)
             for ml in meta_lines:
@@ -179,8 +163,8 @@ def _do_render_canvas(
         node_sizes[node.id] = (box_w, box_h)
         node_content[node.id] = content_lines
 
-    # 3. Layout with grandalf
-    boxes = _layout(graph.nodes, graph.edges, node_sizes, options.padding)
+    # 3. Layout
+    boxes = _sugiyama_layout(graph.nodes, graph.edges, node_sizes, options.padding)
 
     # 4. Determine canvas size — account for backward-edge corridors
     corridor_map, extra_right = _backward_edge_corridors(graph.edges, boxes)
@@ -188,18 +172,27 @@ def _do_render_canvas(
     max_y = max(b.y + b.h for b in boxes.values()) + options.padding
     canvas = Canvas(max_x, max_y)
 
+    # Pre-cache theme styles per node type (avoid redundant hash lookups)
+    style_cache: dict[str, Any] = {}
+    for node in graph.nodes:
+        if node.type not in style_cache:
+            style_cache[node.type] = theme.get_style(node.type)
+
     # 5. Draw nodes
+    node_border_colors: dict[str, str | None] = {}
     for node in graph.nodes:
         box = boxes[node.id]
         type_lbl = _type_label(node.type, options.show_types)
-        style = theme.get_style(node.type)
+        style = style_cache[node.type]
+        border_c = style.border or None
+        node_border_colors[node.id] = border_c
         draw_box(
             canvas,
             box,
             node_content[node.id],
             use_unicode=options.use_unicode,
             type_label=type_lbl,
-            border_color=style.border or None,
+            border_color=border_c,
             text_color=style.text or None,
             type_color=style.type_label or None,
         )
@@ -215,11 +208,6 @@ def _do_render_canvas(
     # 6. Draw edges
     edge_color = theme.edge or None
     label_color = theme.edge_label or None
-    # Map node id → border color for junction/arrow tinting
-    node_border_colors: dict[str, str | None] = {}
-    for node in graph.nodes:
-        style = theme.get_style(node.type)
-        node_border_colors[node.id] = style.border or None
     for idx, edge in enumerate(graph.edges):
         src_box = boxes.get(edge.source)
         tgt_box = boxes.get(edge.target)
@@ -300,141 +288,6 @@ def _metadata_lines(node: AsciiNode, max_line: int = _META_MAX_LINE) -> list[str
         lines.append(", ".join(row))
 
     return lines
-
-
-# ---------------------------------------------------------------------------
-# Layout engine (grandalf wrapper)
-# ---------------------------------------------------------------------------
-
-
-class _VertexView:
-    """Minimal view for grandalf SugiyamaLayout."""
-
-    def __init__(self, w: float = 10, h: float = 4) -> None:
-        self.w = w
-        self.h = h
-        self.xy = (0.0, 0.0)
-
-
-def _layout(
-    nodes: list[AsciiNode],
-    edges: list[AsciiEdge],
-    node_sizes: dict[str, tuple[int, int]],
-    padding: int,
-) -> dict[str, Box]:
-    """Compute box positions using grandalf Sugiyama layout."""
-    if len(nodes) == 1:
-        # Single node — centre it
-        w, h = node_sizes[nodes[0].id]
-        return {nodes[0].id: Box(x=padding, y=padding, w=w, h=h)}
-
-    vertices: dict[str, Vertex] = {}
-    for node in nodes:
-        w, h = node_sizes[node.id]
-        v = Vertex(node.id)
-        v.view = _VertexView(w, h)
-        vertices[node.id] = v
-
-    edge_list: list[Edge] = []
-    for edge in edges:
-        src_v = vertices.get(edge.source)
-        tgt_v = vertices.get(edge.target)
-        if src_v and tgt_v:
-            edge_list.append(Edge(src_v, tgt_v))
-
-    g = Graph(list(vertices.values()), edge_list)
-
-    # Layout each connected component and arrange them side-by-side
-    x_offset = 0.0
-    try:
-        for component in g.C:
-            sug = SugiyamaLayout(component)
-            sug.xspace = 4
-            sug.yspace = 2
-            for v in component.sV:
-                if v.view is None:
-                    v.view = _VertexView()
-            sug.init_all()
-            sug.draw()
-
-            # Shift this component right so it doesn't overlap previous ones
-            if x_offset > 0:
-                comp_min_x = min(v.view.xy[0] - v.view.w / 2 for v in component.sV)
-                shift = x_offset - comp_min_x + 4  # 4 chars gap between components
-                for v in component.sV:
-                    cx, cy = v.view.xy
-                    v.view.xy = (cx + shift, cy)
-
-            comp_max_x = max(v.view.xy[0] + v.view.w / 2 for v in component.sV)
-            x_offset = comp_max_x
-    except Exception as err:
-        raise RuntimeError(f"Layout failed: {err}") from err
-
-    # Convert centre coordinates to top-left Box instances
-    raw_boxes: dict[str, Box] = {}
-    for node in nodes:
-        v = vertices[node.id]
-        cx, cy = v.view.xy
-        w, h = node_sizes[node.id]
-        raw_boxes[node.id] = Box(
-            x=int(round(cx - w / 2)),
-            y=int(round(cy - h / 2)),
-            w=w,
-            h=h,
-        )
-
-    # Compact horizontally: close excess gaps between same-layer nodes
-    raw_boxes = _compact_x(raw_boxes, xspace=4)
-
-    # Normalise: shift everything so minimum coordinate equals *padding*
-    min_x = min(b.x for b in raw_boxes.values())
-    min_y = min(b.y for b in raw_boxes.values())
-    dx = padding - min_x
-    dy = padding - min_y
-
-    return {
-        nid: Box(x=b.x + dx, y=b.y + dy, w=b.w, h=b.h) for nid, b in raw_boxes.items()
-    }
-
-
-def _compact_x(boxes: dict[str, Box], xspace: int) -> dict[str, Box]:
-    """Reduce excess horizontal gaps between nodes on the same layer.
-
-    Grandalf's coordinate assignment can over-spread nodes.  This pass
-    keeps the left-to-right ordering but closes gaps so adjacent nodes
-    are separated by at most *xspace* characters.
-    """
-    from collections import defaultdict
-
-    # Group by layer — nodes with the same centre-y are on the same layer
-    layers: dict[int, list[str]] = defaultdict(list)
-    for nid, b in boxes.items():
-        cy = round(b.y + b.h / 2)
-        layers[cy].append(nid)
-
-    shifts: dict[str, int] = {}  # nid → cumulative x shift
-
-    for _cy, nids in layers.items():
-        if len(nids) < 2:
-            continue
-        nids.sort(key=lambda n: boxes[n].x)
-
-        for i in range(1, len(nids)):
-            prev = nids[i - 1]
-            curr = nids[i]
-            prev_right = boxes[prev].x + shifts.get(prev, 0) + boxes[prev].w
-            curr_x = boxes[curr].x + shifts.get(curr, 0)
-            gap = curr_x - prev_right
-            if gap > xspace:
-                shifts[curr] = shifts.get(curr, 0) - (gap - xspace)
-
-    if not shifts:
-        return boxes
-
-    return {
-        nid: Box(x=b.x + shifts.get(nid, 0), y=b.y, w=b.w, h=b.h)
-        for nid, b in boxes.items()
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -584,14 +437,18 @@ def _draw_forward_edge(
             mid_y = (start_y + end_y) // 2
 
         # Vertical from source down to mid_y
+        ch_v = ch["v"]
+        rows = canvas._rows
+        colors = canvas._colors
         for y in range(start_y + 1, mid_y):
-            canvas.put(src_cx, y, ch["v"], edge_color)
+            rows[y][src_cx] = ch_v
+            if edge_color is not None:
+                colors[y][src_cx] = edge_color
 
         # Horizontal at mid_y
         x_min = min(src_cx, tgt_cx)
         x_max = max(src_cx, tgt_cx)
-        for x in range(x_min, x_max + 1):
-            canvas.put(x, mid_y, ch["h"], edge_color)
+        canvas.puts(x_min, mid_y, ch["h"] * (x_max - x_min + 1), edge_color)
 
         # Corners
         if src_cx < tgt_cx:
@@ -608,20 +465,34 @@ def _draw_forward_edge(
 
         # Vertical from mid_y down to arrow
         for y in range(mid_y + 1, arrow_y):
-            canvas.put(tgt_cx, y, ch["v"], edge_color)
+            rows[y][tgt_cx] = ch_v
+            if edge_color is not None:
+                colors[y][tgt_cx] = edge_color
 
         # Arrow above target box
         canvas.put(tgt_cx, arrow_y, ch["arrow_down"], edge_color)
 
 
-def _inside_other_box(
-    x: int, y: int, boxes: dict[str, Box], src: Box, tgt: Box
-) -> bool:
-    """Return True if (x, y) falls inside any box other than *src* or *tgt*."""
+def _x_intervals_at_y(
+    y: int, boxes: dict[str, Box], src: Box, tgt: Box
+) -> list[tuple[int, int]]:
+    """Return sorted (x_start, x_end) intervals of boxes overlapping row *y*."""
+    intervals = []
     for b in boxes.values():
         if b is src or b is tgt:
             continue
-        if b.x <= x < b.x + b.w and b.y <= y < b.y + b.h:
+        if b.y <= y < b.y + b.h:
+            intervals.append((b.x, b.x + b.w))
+    intervals.sort()
+    return intervals
+
+
+def _x_in_intervals(x: int, intervals: list[tuple[int, int]]) -> bool:
+    """Return True if *x* falls inside any of the pre-sorted intervals."""
+    for x0, x1 in intervals:
+        if x0 > x:
+            break
+        if x0 <= x < x1:
             return True
     return False
 
@@ -644,9 +515,16 @@ def _draw_backward_edge(
     src_mid_y = src.y + src.h // 2
     tgt_mid_y = tgt.y + tgt.h // 2
 
+    # Pre-compute occupied x-intervals for the two horizontal rows
+    src_intervals: list[tuple[int, int]] = []
+    tgt_intervals: list[tuple[int, int]] = []
+    if all_boxes:
+        src_intervals = _x_intervals_at_y(src_mid_y, all_boxes, src, tgt)
+        tgt_intervals = _x_intervals_at_y(tgt_mid_y, all_boxes, src, tgt)
+
     # Horizontal from source right side — skip intermediate node boxes
     for x in range(src.x + src.w, route_x + 1):
-        if all_boxes and _inside_other_box(x, src_mid_y, all_boxes, src, tgt):
+        if src_intervals and _x_in_intervals(x, src_intervals):
             continue
         canvas.put(x, src_mid_y, ch["h"], edge_color)
     canvas.put(src.x + src.w - 1, src_mid_y, ch["jl"], edge_color)  # ├
@@ -667,7 +545,7 @@ def _draw_backward_edge(
 
     # Horizontal to target right side — skip intermediate node boxes
     for x in range(tgt.x + tgt.w, route_x):
-        if all_boxes and _inside_other_box(x, tgt_mid_y, all_boxes, src, tgt):
+        if tgt_intervals and _x_in_intervals(x, tgt_intervals):
             continue
         canvas.put(x, tgt_mid_y, ch["h"], edge_color)
 
@@ -693,14 +571,16 @@ def _draw_side_edge(
     if src.x + src.w <= tgt.x:
         # src is left of tgt
         y = max(src.y, tgt.y) + 1
-        for x in range(src.x + src.w, tgt.x):
-            canvas.put(x, y, ch["h"], edge_color)
+        span = tgt.x - (src.x + src.w)
+        if span > 0:
+            canvas.puts(src.x + src.w, y, ch["h"] * span, edge_color)
         canvas.put(tgt.x, y, ch["arrow_right"], edge_color)
     elif tgt.x + tgt.w <= src.x:
         # tgt is left of src
         y = max(src.y, tgt.y) + 1
-        for x in range(tgt.x + tgt.w, src.x):
-            canvas.put(x, y, ch["h"], edge_color)
+        span = src.x - (tgt.x + tgt.w)
+        if span > 0:
+            canvas.puts(tgt.x + tgt.w, y, ch["h"] * span, edge_color)
         canvas.put(tgt.x + tgt.w - 1, y, ch["arrow_left"], edge_color)
 
     if label:

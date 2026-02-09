@@ -4,7 +4,7 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/graphtty)](https://img.shields.io/pypi/v/graphtty)
 [![Python versions](https://img.shields.io/pypi/pyversions/graphtty.svg)](https://pypi.org/project/graphtty/)
 
-Turn any directed graph into colored ASCII art for your terminal.
+Turn any directed graph into colored ASCII art for your terminal. Pure Python, zero external dependencies.
 
 ## Installation
 
@@ -123,11 +123,24 @@ graphtty reads a simple JSON format:
 }
 ```
 
+## Benchmarks
+
+graphtty uses a custom Sugiyama-style layout engine and optimized canvas operations for fast rendering. Benchmarks across all 8 sample graphs (50 iterations each, Python 3.11):
+
+| Sample | Avg (ms) | Ops/sec |
+|---|---:|---:|
+| react-agent (4 nodes) | 0.17 | 5,985 |
+| deep-agent (7 nodes) | 0.35 | 2,824 |
+| workflow-agent (11 nodes) | 0.46 | 2,173 |
+| world-map (15 nodes) | 0.62 | 1,603 |
+| rag-pipeline (10 nodes) | 0.77 | 1,305 |
+| supervisor-agent (7+subs) | 0.86 | 1,167 |
+| etl-pipeline (12 nodes) | 0.87 | 1,151 |
+| code-review (8+subs) | 1.40 | 713 |
+
+Run `python scripts/benchmark.py` to reproduce on your machine.
+
 ## Related Projects
 
-- **[uipath-dev](https://github.com/UiPath/uipath-dev)** — Developer console for debugging and inspecting AI agents
-- **[uipath-python](https://github.com/UiPath/uipath-python)** — Python SDK and CLI to build, test, and deploy AI agents
-
-## Acknowledgements
-
-Built with :heart: on top of [grandalf](https://github.com/bdcht/grandalf), a Python library for graph layout using the Sugiyama algorithm.
+- **[uipath-dev](https://github.com/UiPath/uipath-dev)**: Developer console for debugging and inspecting AI agents
+- **[uipath-python](https://github.com/UiPath/uipath-python)**: Python SDK and CLI to build, test, and deploy AI agents

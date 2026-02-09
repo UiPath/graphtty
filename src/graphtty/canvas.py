@@ -63,6 +63,18 @@ class Canvas:
         self.height = height
         self._rows: list[list[str]] = [[" "] * width for _ in range(height)]
         self._colors: list[list[str | None]] = [[None] * width for _ in range(height)]
+        # Bounding box of non-space content (inclusive)
+        self._bb_x0 = width
+        self._bb_x1 = -1
+        self._bb_y0 = height
+        self._bb_y1 = -1
+
+    @property
+    def visual_size(self) -> tuple[int, int]:
+        """Return (width, height) of the non-space bounding box — O(1)."""
+        if self._bb_x1 < 0:
+            return (0, 0)
+        return (self._bb_x1 + 1, self._bb_y1 + 1)
 
     def put(self, x: int, y: int, ch: str, color: str | None = None) -> None:
         """Place a single character at (x, y) with optional ANSI *color*."""
@@ -70,6 +82,15 @@ class Canvas:
             self._rows[y][x] = ch
             if color is not None:
                 self._colors[y][x] = color
+            if ch != " ":
+                if x < self._bb_x0:
+                    self._bb_x0 = x
+                if x > self._bb_x1:
+                    self._bb_x1 = x
+                if y < self._bb_y0:
+                    self._bb_y0 = y
+                if y > self._bb_y1:
+                    self._bb_y1 = y
 
     def get(self, x: int, y: int) -> str:
         """Read a single character at (x, y)."""
@@ -79,8 +100,31 @@ class Canvas:
 
     def puts(self, x: int, y: int, text: str, color: str | None = None) -> None:
         """Write a string horizontally starting at (x, y)."""
-        for i, ch in enumerate(text):
-            self.put(x + i, y, ch, color)
+        if not text or y < 0 or y >= self.height:
+            return
+        # Clip to canvas bounds
+        start = max(0, -x)
+        end = min(len(text), self.width - x)
+        if start >= end:
+            return
+        row = self._rows[y]
+        x0 = x + start
+        for i in range(start, end):
+            row[x + i] = text[i]
+        if color is not None:
+            colors_row = self._colors[y]
+            for i in range(start, end):
+                colors_row[x + i] = color
+        # Update bounding box
+        x1 = x + end - 1
+        if x0 < self._bb_x0:
+            self._bb_x0 = x0
+        if x1 > self._bb_x1:
+            self._bb_x1 = x1
+        if y < self._bb_y0:
+            self._bb_y0 = y
+        if y > self._bb_y1:
+            self._bb_y1 = y
 
     def blit(self, x: int, y: int, block: str, color: str | None = None) -> None:
         """Paste a multi-line block of text onto the canvas."""
@@ -91,26 +135,66 @@ class Canvas:
 
     def blit_canvas(self, src: Canvas, x: int, y: int) -> None:
         """Copy non-space cells (and their colors) from *src* onto this canvas."""
-        for sy in range(src.height):
-            for sx in range(src.width):
-                ch = src._rows[sy][sx]
+        # Use source bounding box to skip empty regions
+        if src._bb_x1 < 0:
+            return  # source is empty
+        sy0 = src._bb_y0
+        sy1 = src._bb_y1
+        sx0 = src._bb_x0
+        sx1 = src._bb_x1
+        dst_w = self.width
+        dst_h = self.height
+        dst_rows = self._rows
+        dst_colors = self._colors
+        src_rows = src._rows
+        src_colors = src._colors
+        for sy in range(sy0, sy1 + 1):
+            dy = y + sy
+            if dy < 0 or dy >= dst_h:
+                continue
+            src_row = src_rows[sy]
+            src_col = src_colors[sy]
+            dst_row = dst_rows[dy]
+            dst_col = dst_colors[dy]
+            for sx in range(sx0, sx1 + 1):
+                ch = src_row[sx]
                 if ch != " ":
-                    dx, dy = x + sx, y + sy
-                    if 0 <= dx < self.width and 0 <= dy < self.height:
-                        self._rows[dy][dx] = ch
-                        self._colors[dy][dx] = src._colors[sy][sx]
+                    dx = x + sx
+                    if 0 <= dx < dst_w:
+                        dst_row[dx] = ch
+                        dst_col[dx] = src_col[sx]
+        # Update bounding box
+        dx0 = x + sx0
+        dx1 = x + sx1
+        dy0 = y + sy0
+        dy1 = y + sy1
+        if dx0 < self._bb_x0:
+            self._bb_x0 = max(0, dx0)
+        if dx1 > self._bb_x1:
+            self._bb_x1 = min(dst_w - 1, dx1)
+        if dy0 < self._bb_y0:
+            self._bb_y0 = max(0, dy0)
+        if dy1 > self._bb_y1:
+            self._bb_y1 = min(dst_h - 1, dy1)
 
     def to_string(self, *, use_color: bool = False) -> str:
         """Convert canvas to a string, trimming trailing whitespace.
 
         When *use_color* is ``True``, per-cell ANSI color codes are emitted.
         """
+        # Fast path: nothing drawn
+        if self._bb_x1 < 0:
+            return ""
+
+        y0 = self._bb_y0
+        y1 = self._bb_y1
+        bb_x1 = self._bb_x1
         lines: list[str] = []
-        for y in range(self.height):
+        for y in range(y0, y1 + 1):
             row = self._rows[y]
 
-            # Find last non-space character (for trimming)
-            last = len(row) - 1
+            # Find last non-space character — scan left from bb_x1 hint
+            last = min(bb_x1, len(row) - 1)
             while last >= 0 and row[last] == " ":
                 last -= 1
 
@@ -121,17 +205,27 @@ class Canvas:
             if not use_color:
                 lines.append("".join(row[: last + 1]))
             else:
+                # Batch consecutive same-color cells into runs
                 parts: list[str] = []
+                colors_row = self._colors[y]
                 current_color: str | None = None
-                for x in range(last + 1):
-                    cell_color = self._colors[y][x]
+                run_start = 0
+                end = last + 1
+                for x in range(end):
+                    cell_color = colors_row[x]
                     if cell_color != current_color:
+                        # Flush previous run
+                        if x > run_start:
+                            parts.append("".join(row[run_start:x]))
                         if current_color is not None:
                             parts.append(RESET)
                         if cell_color is not None:
                             parts.append(cell_color)
                         current_color = cell_color
-                    parts.append(row[x])
+                        run_start = x
+                # Flush final run
+                if end > run_start:
+                    parts.append("".join(row[run_start:end]))
                 if current_color is not None:
                     parts.append(RESET)
                 lines.append("".join(parts))
@@ -143,7 +237,7 @@ class Canvas:
         return "\n".join(lines)
 
 
-@dataclass
+@dataclass(slots=True)
 class Box:
     """A positioned rectangle on the canvas."""
 
@@ -237,8 +331,7 @@ def draw_hline(
     ch = chars(use_unicode)
     start = min(x1, x2)
     end = max(x1, x2)
-    for x in range(start, end + 1):
-        canvas.put(x, y, ch["h"], color)
+    canvas.puts(start, y, ch["h"] * (end - start + 1), color)
 
 
 def draw_vline(
@@ -251,8 +344,28 @@ def draw_vline(
     color: str | None = None,
 ) -> None:
     """Draw a vertical line from y1 to y2 at column x."""
-    ch = chars(use_unicode)
-    start = min(y1, y2)
-    end = max(y1, y2)
-    for y in range(start, end + 1):
-        canvas.put(x, y, ch["v"], color)
+    if x < 0 or x >= canvas.width:
+        return
+    ch_v = chars(use_unicode)["v"]
+    start = max(min(y1, y2), 0)
+    end = min(max(y1, y2), canvas.height - 1)
+    if start > end:
+        return
+    rows = canvas._rows
+    if color is not None:
+        colors = canvas._colors
+        for y in range(start, end + 1):
+            rows[y][x] = ch_v
+            colors[y][x] = color
+    else:
+        for y in range(start, end + 1):
+            rows[y][x] = ch_v
+    # Update bounding box once
+    if x < canvas._bb_x0:
+        canvas._bb_x0 = x
+    if x > canvas._bb_x1:
+        canvas._bb_x1 = x
+    if start < canvas._bb_y0:
+        canvas._bb_y0 = start
+    if end > canvas._bb_y1:
+        canvas._bb_y1 = end
