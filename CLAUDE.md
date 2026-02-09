@@ -39,7 +39,7 @@ Other layout stages: component detection (BFS), cycle breaking (DFS back-edge re
 - After modifying any Python file, always run `uv run ruff check --fix .` before finishing
 - Before committing or creating a PR, always run `uv run ty check` and fix any errors
 - Commit messages MUST follow the [Conventional Commits](https://www.conventionalcommits.org/) format: `type(scope): description` (e.g. `feat: add adaptive width rendering`, `fix(renderer): handle zero-width canvas`). Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`. The repo uses commitlint to enforce this.
-- NEVER create a PR unless the user explicitly asks you to. Only commit, branch, and push when told to do so.
+- **NEVER commit, amend, push, create branches, or create PRs unless the user EXPLICITLY tells you to.** Do not assume — wait for direct instructions for every git operation.
 
 ## Common Commands
 
