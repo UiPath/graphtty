@@ -1,0 +1,67 @@
+{
+    "nodes": [
+        {
+            "id": "__start__",
+            "name": "__start__",
+            "type": "__start__",
+            "subgraph": null
+        },
+        {
+            "id": "create_chapter_files",
+            "name": "create_chapter_files",
+            "type": "node",
+            "subgraph": null
+        },
+        {
+            "id": "generate_book_outline",
+            "name": "generate_book_outline",
+            "type": "node",
+            "subgraph": null
+        },
+        {
+            "id": "generate_chapters_content",
+            "name": "generate_chapters_content",
+            "type": "node",
+            "subgraph": null
+        },
+        {
+            "id": "upload_chapter_files",
+            "name": "upload_chapter_files",
+            "type": "node",
+            "subgraph": null
+        },
+        {
+            "id": "__end__",
+            "name": "__end__",
+            "type": "__end__",
+            "subgraph": null
+        }
+    ],
+    "edges": [
+        {
+            "source": "create_chapter_files",
+            "target": "upload_chapter_files",
+            "label": "ChaptersFilesEvent"
+        },
+        {
+            "source": "__start__",
+            "target": "generate_book_outline",
+            "label": "BookRequestEvent"
+        },
+        {
+            "source": "generate_book_outline",
+            "target": "generate_chapters_content",
+            "label": "BookOutlineEvent"
+        },
+        {
+            "source": "generate_chapters_content",
+            "target": "create_chapter_files",
+            "label": "ChaptersContentEvent"
+        },
+        {
+            "source": "upload_chapter_files",
+            "target": "__end__",
+            "label": "BookCompleteEvent"
+        }
+    ]
+}

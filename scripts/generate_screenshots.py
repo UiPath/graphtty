@@ -198,6 +198,11 @@ def main():
             "monokai",
             "Function Agent (monokai)",
         ),
+        (
+            "samples/book-writer-agent/graph.json",
+            "nord",
+            "Book Writer Agent (nord)",
+        ),
     ]
 
     images: list[tuple[str, Image.Image]] = []
