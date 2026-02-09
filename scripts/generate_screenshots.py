@@ -208,6 +208,11 @@ def main():
             "solarized",
             "Travel RAG Agent (solarized)",
         ),
+        (
+            "samples/orchestrator-agent/graph.json",
+            "dracula",
+            "Orchestrator Agent (dracula)",
+        ),
     ]
 
     images: list[tuple[str, Image.Image]] = []
