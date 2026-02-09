@@ -125,19 +125,20 @@ graphtty reads a simple JSON format:
 
 ## Benchmarks
 
-graphtty uses a custom Sugiyama-style layout engine and optimized canvas operations for fast rendering. Benchmarks across all 9 sample graphs (50 iterations each, Python 3.11):
+graphtty uses a custom Sugiyama-style layout engine and optimized canvas operations for fast rendering. Benchmarks across all 10 sample graphs (50 iterations each, Python 3.11):
 
 | Sample | Avg (ms) | Ops/sec |
 |---|---:|---:|
-| react-agent (4 nodes) | 0.15 | 6,522 |
-| deep-agent (7 nodes) | 0.31 | 3,161 |
-| function-agent (8 nodes) | 0.36 | 2,806 |
-| workflow-agent (11 nodes) | 0.42 | 2,370 |
-| world-map (15 nodes) | 0.55 | 1,818 |
-| supervisor-agent (7+subs) | 0.71 | 1,406 |
-| rag-pipeline (10 nodes) | 0.74 | 1,347 |
-| etl-pipeline (12 nodes) | 0.84 | 1,193 |
-| code-review (8+subs) | 1.16 | 864 |
+| react-agent (4 nodes) | 0.15 | 6,593 |
+| book-writer-agent (6 nodes) | 0.25 | 4,083 |
+| deep-agent (7 nodes) | 0.32 | 3,144 |
+| function-agent (8 nodes) | 0.37 | 2,686 |
+| workflow-agent (11 nodes) | 0.49 | 2,060 |
+| world-map (15 nodes) | 0.61 | 1,651 |
+| rag-pipeline (10 nodes) | 0.70 | 1,427 |
+| supervisor-agent (7+subs) | 0.80 | 1,250 |
+| etl-pipeline (12 nodes) | 0.82 | 1,225 |
+| code-review (8+subs) | 1.21 | 829 |
 
 Run `python scripts/benchmark.py` to reproduce on your machine.
 

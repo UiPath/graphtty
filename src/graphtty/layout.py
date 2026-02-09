@@ -304,7 +304,7 @@ def _assign_coordinates(
         new_centers: dict[str, float] = {}
         for nid in order:
             w = node_sizes[nid][0]
-            ideal_x = int(desired[nid] - w / 2.0)
+            ideal_x = round(desired[nid]) - w // 2
             x = max(ideal_x, cx)
             new_x[nid] = x
             new_centers[nid] = x + w / 2.0
@@ -346,7 +346,7 @@ def _assign_coordinates(
                 continue
             desired_center = sum(child_cx) / len(child_cx)
             w = node_sizes[nid][0]
-            x = max(int(desired_center - w / 2.0), 0)
+            x = max(round(desired_center) - w // 2, 0)
             layer_x[li] = {nid: x}
             layer_centers[li] = {nid: x + w / 2.0}
 
@@ -363,7 +363,7 @@ def _assign_coordinates(
             continue
         desired_center = sum(parent_cx) / len(parent_cx)
         w = node_sizes[nid][0]
-        x = max(int(desired_center - w / 2.0), 0)
+        x = max(round(desired_center) - w // 2, 0)
         layer_x[li] = {nid: x}
         layer_centers[li] = {nid: x + w / 2.0}
 
