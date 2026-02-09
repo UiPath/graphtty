@@ -50,8 +50,8 @@ def render(
 
     Returns a multi-line string ready for ``print()``.
     """
-    if isinstance(graph, dict):
-        graph = AsciiGraph(**graph)
+    if not isinstance(graph, AsciiGraph):
+        graph = AsciiGraph(nodes=graph.get("nodes", []), edges=graph.get("edges", []))
 
     if options is None:
         options = RenderOptions()

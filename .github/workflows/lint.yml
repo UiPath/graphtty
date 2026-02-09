@@ -28,7 +28,7 @@ jobs:
         run: uv sync --locked --all-extras
 
       - name: Check static types
-        run: uv run mypy --config-file pyproject.toml .
+        run: uv run ty check
 
       - name: Check linting
         run: uv run ruff check .
