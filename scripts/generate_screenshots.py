@@ -203,6 +203,11 @@ def main():
             "nord",
             "Book Writer Agent (nord)",
         ),
+        (
+            "samples/travel-rag-agent/graph.json",
+            "solarized",
+            "Travel RAG Agent (solarized)",
+        ),
     ]
 
     images: list[tuple[str, Image.Image]] = []

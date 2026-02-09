@@ -1,0 +1,99 @@
+{
+    "nodes": [
+        {
+            "id": "__start__",
+            "name": "__start__",
+            "type": "__start__",
+            "subgraph": null
+        },
+        {
+            "id": "add_data_to_index",
+            "name": "add_data_to_index",
+            "type": "node",
+            "subgraph": null
+        },
+        {
+            "id": "combine_and_interpret_answers",
+            "name": "combine_and_interpret_answers",
+            "type": "node",
+            "subgraph": null
+        },
+        {
+            "id": "create_sub_questions_plan",
+            "name": "create_sub_questions_plan",
+            "type": "node",
+            "subgraph": null
+        },
+        {
+            "id": "handle_sub_question",
+            "name": "handle_sub_question",
+            "type": "node",
+            "subgraph": null
+        },
+        {
+            "id": "wait_for_index_ingestion",
+            "name": "wait_for_index_ingestion",
+            "type": "node",
+            "subgraph": null
+        },
+        {
+            "id": "workflow_entrypoint",
+            "name": "workflow_entrypoint",
+            "type": "node",
+            "subgraph": null
+        },
+        {
+            "id": "__end__",
+            "name": "__end__",
+            "type": "__end__",
+            "subgraph": null
+        }
+    ],
+    "edges": [
+        {
+            "source": "add_data_to_index",
+            "target": "wait_for_index_ingestion",
+            "label": "WaitForIndexIngestion"
+        },
+        {
+            "source": "combine_and_interpret_answers",
+            "target": "__end__",
+            "label": "OutputEvent"
+        },
+        {
+            "source": "create_sub_questions_plan",
+            "target": "handle_sub_question",
+            "label": "SubQuestionEvent"
+        },
+        {
+            "source": "handle_sub_question",
+            "target": "combine_and_interpret_answers",
+            "label": "AnswerEvent"
+        },
+        {
+            "source": "wait_for_index_ingestion",
+            "target": "create_sub_questions_plan",
+            "label": "QueryEvent"
+        },
+        {
+            "source": "wait_for_index_ingestion",
+            "target": "__end__",
+            "label": "OutputEvent"
+        },
+        {
+            "source": "__start__",
+            "target": "workflow_entrypoint",
+            "label": "CustomStartEvent"
+        },
+        {
+            "source": "workflow_entrypoint",
+            "target": "create_sub_questions_plan",
+            "label": "QueryEvent"
+        },
+        {
+            "source": "workflow_entrypoint",
+            "target": "add_data_to_index",
+            "label": "AddDataToIndexEvent"
+        }
+    ]
+}

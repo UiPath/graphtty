@@ -168,14 +168,9 @@ def _do_render_canvas(
 
     # 4. Determine canvas size — account for edge corridors
     corridor_map, extra_right = _backward_edge_corridors(graph.edges, boxes)
-    # Forward skip-layer corridors (placed after backward corridors)
-    min_fwd = (max(corridor_map.values()) + 3) if corridor_map else 0
-    fwd_map, fwd_extra = _forward_skip_corridors(
-        graph.edges, boxes, min_route_x=min_fwd
-    )
-    corridor_map.update(fwd_map)
-    extra_right = max(extra_right, fwd_extra)
-    # Account for edge labels that extend past the rightmost box
+
+    # Compute max right extent of forward-edge labels so corridors
+    # are placed past them and don't overwrite label text.
     label_max_x = 0
     for edge in graph.edges:
         if not edge.label:
@@ -184,16 +179,28 @@ def _do_render_canvas(
         tgt_box = boxes.get(edge.target)
         if src_box is None or tgt_box is None:
             continue
-        # Straight forward edges: label at tgt_cx + 2
-        if src_box.bottom < tgt_box.top:
-            cx = (
-                tgt_box.cx
-                if abs(src_box.cx - tgt_box.cx) <= _STRAIGHT_TOLERANCE
-                else (src_box.cx + tgt_box.cx) // 2
-            )
-            label_right = cx + 2 + len(edge.label)
-            if label_right > label_max_x:
-                label_max_x = label_right
+        if src_box.bottom >= tgt_box.top:
+            continue  # backward edge
+        cx = (
+            tgt_box.cx
+            if abs(src_box.cx - tgt_box.cx) <= _STRAIGHT_TOLERANCE
+            else (src_box.cx + tgt_box.cx) // 2
+        )
+        label_right = cx + 2 + len(edge.label)
+        if label_right > label_max_x:
+            label_max_x = label_right
+
+    # Forward skip-layer corridors (placed after backward corridors AND labels)
+    min_fwd = max(
+        (max(corridor_map.values()) + 3) if corridor_map else 0,
+        label_max_x + 1 if label_max_x > 0 else 0,
+    )
+    fwd_map, fwd_extra = _forward_skip_corridors(
+        graph.edges, boxes, min_route_x=min_fwd
+    )
+    corridor_map.update(fwd_map)
+    extra_right = max(extra_right, fwd_extra)
+
     box_max_x = max(b.x + b.w for b in boxes.values())
     max_x = max(box_max_x + extra_right, label_max_x) + options.padding
     max_y = max(b.y + b.h for b in boxes.values()) + options.padding
