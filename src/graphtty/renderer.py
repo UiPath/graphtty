@@ -175,7 +175,27 @@ def _do_render_canvas(
     )
     corridor_map.update(fwd_map)
     extra_right = max(extra_right, fwd_extra)
-    max_x = max(b.x + b.w for b in boxes.values()) + extra_right + options.padding
+    # Account for edge labels that extend past the rightmost box
+    label_max_x = 0
+    for edge in graph.edges:
+        if not edge.label:
+            continue
+        src_box = boxes.get(edge.source)
+        tgt_box = boxes.get(edge.target)
+        if src_box is None or tgt_box is None:
+            continue
+        # Straight forward edges: label at tgt_cx + 2
+        if src_box.bottom < tgt_box.top:
+            cx = (
+                tgt_box.cx
+                if abs(src_box.cx - tgt_box.cx) <= _STRAIGHT_TOLERANCE
+                else (src_box.cx + tgt_box.cx) // 2
+            )
+            label_right = cx + 2 + len(edge.label)
+            if label_right > label_max_x:
+                label_max_x = label_right
+    box_max_x = max(b.x + b.w for b in boxes.values())
+    max_x = max(box_max_x + extra_right, label_max_x) + options.padding
     max_y = max(b.y + b.h for b in boxes.values()) + options.padding
     canvas = Canvas(max_x, max_y)
 
