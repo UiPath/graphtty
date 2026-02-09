@@ -1,0 +1,167 @@
+{
+    "nodes": [
+        {
+            "id": "__start__",
+            "name": "__start__",
+            "type": "__start__",
+            "subgraph": null,
+            "metadata": null
+        },
+        {
+            "id": "orchestrator_agent",
+            "name": "orchestrator_agent",
+            "type": "node",
+            "subgraph": null,
+            "metadata": null
+        },
+        {
+            "id": "hr_agent",
+            "name": "hr_agent",
+            "type": "node",
+            "subgraph": null,
+            "metadata": null
+        },
+        {
+            "id": "hr_agent_tools",
+            "name": "tools",
+            "type": "tool",
+            "subgraph": null,
+            "metadata": {
+                "tool_names": [
+                    "check_pto_balance",
+                    "submit_leave_request",
+                    "check_leave_request_status",
+                    "check_employee_benefits",
+                    "get_salary_info",
+                    "schedule_hr_meeting"
+                ],
+                "tool_count": 6
+            }
+        },
+        {
+            "id": "procurement_agent",
+            "name": "procurement_agent",
+            "type": "node",
+            "subgraph": null,
+            "metadata": null
+        },
+        {
+            "id": "procurement_agent_tools",
+            "name": "tools",
+            "type": "tool",
+            "subgraph": null,
+            "metadata": {
+                "tool_names": [
+                    "check_budget_availability",
+                    "get_vendor_information",
+                    "create_purchase_order",
+                    "track_order_status",
+                    "request_budget_reallocation",
+                    "search_preferred_vendors"
+                ],
+                "tool_count": 6
+            }
+        },
+        {
+            "id": "policy_agent",
+            "name": "policy_agent",
+            "type": "node",
+            "subgraph": null,
+            "metadata": null
+        },
+        {
+            "id": "policy_agent_tools",
+            "name": "tools",
+            "type": "tool",
+            "subgraph": null,
+            "metadata": {
+                "tool_names": [
+                    "get_company_policy",
+                    "check_compliance_status",
+                    "request_policy_clarification",
+                    "search_policy_documents"
+                ],
+                "tool_count": 4
+            }
+        },
+        {
+            "id": "__end__",
+            "name": "__end__",
+            "type": "__end__",
+            "subgraph": null,
+            "metadata": null
+        }
+    ],
+    "edges": [
+        {
+            "source": "hr_agent",
+            "target": "hr_agent_tools",
+            "label": null
+        },
+        {
+            "source": "hr_agent_tools",
+            "target": "hr_agent",
+            "label": null
+        },
+        {
+            "source": "orchestrator_agent",
+            "target": "hr_agent",
+            "label": null
+        },
+        {
+            "source": "hr_agent",
+            "target": "orchestrator_agent",
+            "label": null
+        },
+        {
+            "source": "procurement_agent",
+            "target": "procurement_agent_tools",
+            "label": null
+        },
+        {
+            "source": "procurement_agent_tools",
+            "target": "procurement_agent",
+            "label": null
+        },
+        {
+            "source": "orchestrator_agent",
+            "target": "procurement_agent",
+            "label": null
+        },
+        {
+            "source": "procurement_agent",
+            "target": "orchestrator_agent",
+            "label": null
+        },
+        {
+            "source": "policy_agent",
+            "target": "policy_agent_tools",
+            "label": null
+        },
+        {
+            "source": "policy_agent_tools",
+            "target": "policy_agent",
+            "label": null
+        },
+        {
+            "source": "orchestrator_agent",
+            "target": "policy_agent",
+            "label": null
+        },
+        {
+            "source": "policy_agent",
+            "target": "orchestrator_agent",
+            "label": null
+        },
+        {
+            "source": "__start__",
+            "target": "orchestrator_agent",
+            "label": "input"
+        },
+        {
+            "source": "orchestrator_agent",
+            "target": "__end__",
+            "label": "output"
+        }
+    ]
+}
