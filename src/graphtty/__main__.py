@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import shutil
 import sys
@@ -103,7 +104,7 @@ def main(argv: list[str] | None = None) -> None:
         parser.error("the following arguments are required: file")
 
     # Ensure UTF-8 output on Windows
-    if hasattr(sys.stdout, "reconfigure"):
+    if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(encoding="utf-8")
 
     try:
