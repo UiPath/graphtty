@@ -1,17 +1,18 @@
 [project]
 name = "graphtty"
-version = "0.1.1"
+version = "0.1.2"
 description = "Turn any directed graph into colored ASCII art for your terminal"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
-dependencies = ["grandalf==0.8", "pydantic>=2.0"]
+dependencies = []
 classifiers = [
   "Intended Audience :: Developers",
   "Topic :: Software Development :: Build Tools",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 maintainers = [
   { name = "Cristian Pufu", email = "cristian.pufu@uipath.com" },
@@ -56,6 +57,7 @@ ignore-decorators = []
 
 [tool.ruff.lint.per-file-ignores]
 "*" = ["E501"]
+"src/graphtty/types.py" = ["D107"]
 "tests/**" = ["D"]
 "*_test.py" = ["D"]
 
@@ -66,7 +68,6 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.mypy]
-plugins = ["pydantic.mypy"]
 mypy_path = "src"
 exclude = ["samples/"]
 explicit_package_bases = true
@@ -78,11 +79,6 @@ disallow_any_generics = true
 check_untyped_defs = true
 no_implicit_reexport = true
 disallow_untyped_defs = false
-
-[tool.pydantic-mypy]
-init_forbid_extra = true
-init_typed = true
-warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
