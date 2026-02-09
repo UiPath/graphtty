@@ -129,14 +129,14 @@ graphtty uses a custom Sugiyama-style layout engine and optimized canvas operati
 
 | Sample | Avg (ms) | Ops/sec |
 |---|---:|---:|
-| react-agent (4 nodes) | 0.17 | 5,985 |
-| deep-agent (7 nodes) | 0.35 | 2,824 |
-| workflow-agent (11 nodes) | 0.46 | 2,173 |
-| world-map (15 nodes) | 0.62 | 1,603 |
-| rag-pipeline (10 nodes) | 0.77 | 1,305 |
-| supervisor-agent (7+subs) | 0.86 | 1,167 |
-| etl-pipeline (12 nodes) | 0.87 | 1,151 |
-| code-review (8+subs) | 1.40 | 713 |
+| react-agent (4 nodes) | 0.15 | 6,522 |
+| deep-agent (7 nodes) | 0.32 | 3,149 |
+| workflow-agent (11 nodes) | 0.43 | 2,347 |
+| world-map (15 nodes) | 0.53 | 1,887 |
+| rag-pipeline (10 nodes) | 0.71 | 1,419 |
+| supervisor-agent (7+subs) | 0.72 | 1,395 |
+| etl-pipeline (12 nodes) | 0.78 | 1,282 |
+| code-review (8+subs) | 1.13 | 885 |
 
 Run `python scripts/benchmark.py` to reproduce on your machine.
 
