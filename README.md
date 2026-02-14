@@ -146,5 +146,5 @@ Run `python scripts/benchmark.py` to reproduce on your machine.
 
 ## Related Projects
 
-- **[uipath-dev](https://github.com/UiPath/uipath-dev)**: Developer console for debugging and inspecting AI agents
+- **[uipath-dev](https://github.com/UiPath/uipath-dev-python)**: Developer console for debugging and inspecting AI agents
 - **[uipath-python](https://github.com/UiPath/uipath-python)**: Python SDK and CLI to build, test, and deploy AI agents
