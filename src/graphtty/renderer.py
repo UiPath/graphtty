@@ -37,6 +37,8 @@ class RenderOptions:
     padding: int = 2
     theme: Theme = field(default_factory=lambda: DEFAULT_THEME)
     max_width: int | None = None
+    max_depth: int | None = None
+    max_breadth: int | None = None
 
 
 def render(
@@ -58,6 +60,13 @@ def render(
 
     if not graph.nodes:
         return ""
+
+    if options.max_depth is not None or options.max_breadth is not None:
+        from .truncate import truncate_graph
+
+        graph = truncate_graph(
+            graph, max_depth=options.max_depth, max_breadth=options.max_breadth
+        )
 
     use_color = options.theme is not DEFAULT_THEME
     canvas = _render_canvas(graph, options)
@@ -268,7 +277,7 @@ def _do_render_canvas(
 # ---------------------------------------------------------------------------
 
 # Node types that are structural markers — no border label needed.
-_HIDDEN_TYPE_LABELS = {"__start__", "__end__"}
+_HIDDEN_TYPE_LABELS = {"__start__", "__end__", "__truncated__"}
 
 
 def _type_label(node_type: str, show_types: bool) -> str | None:

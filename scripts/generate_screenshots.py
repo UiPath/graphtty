@@ -213,6 +213,11 @@ def main():
             "dracula",
             "Orchestrator Agent (dracula)",
         ),
+        (
+            "samples/call-graph/graph.json",
+            "monokai",
+            "Call Graph (monokai)",
+        ),
     ]
 
     images: list[tuple[str, Image.Image]] = []
