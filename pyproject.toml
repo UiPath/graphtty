@@ -1,6 +1,6 @@
 [project]
 name = "graphtty"
-version = "0.1.6"
+version = "0.1.7"
 description = "Turn any directed graph into colored ASCII art for your terminal"
 readme = "README.md"
 license = "MIT"

@@ -1,0 +1,78 @@
+{
+  "nodes": [
+    {
+      "id": "main",
+      "name": "main",
+      "type": "entrypoint",
+      "description": "CLI entry point"
+    },
+    {
+      "id": "order_pizza",
+      "name": "order_pizza",
+      "type": "function",
+      "description": "Orchestrates the full order flow"
+    },
+    {
+      "id": "select_size",
+      "name": "select_size",
+      "type": "function",
+      "description": "Small, Medium, Large"
+    },
+    {
+      "id": "select_toppings",
+      "name": "select_toppings",
+      "type": "function",
+      "description": "Pepperoni, Mushrooms, Olives"
+    },
+    {
+      "id": "validate_order",
+      "name": "validate_order",
+      "type": "function",
+      "description": "Checks item availability"
+    },
+    {
+      "id": "calculate_price",
+      "name": "calculate_price",
+      "type": "function",
+      "description": "Applies discounts and tax"
+    },
+    {
+      "id": "process_payment",
+      "name": "process_payment",
+      "type": "function",
+      "description": "Stripe API integration"
+    },
+    {
+      "id": "send_confirmation",
+      "name": "send_confirmation",
+      "type": "function",
+      "description": "Email via SendGrid"
+    },
+    {
+      "id": "log_order",
+      "name": "log_order",
+      "type": "function",
+      "description": "Writes to order database"
+    },
+    {
+      "id": "notify_kitchen",
+      "name": "notify_kitchen",
+      "type": "function",
+      "description": "WebSocket push to kitchen display"
+    }
+  ],
+  "edges": [
+    { "source": "main", "target": "order_pizza" },
+    { "source": "order_pizza", "target": "select_size" },
+    { "source": "order_pizza", "target": "select_toppings" },
+    { "source": "select_size", "target": "validate_order" },
+    { "source": "select_toppings", "target": "validate_order" },
+    { "source": "validate_order", "target": "calculate_price" },
+    { "source": "calculate_price", "target": "process_payment" },
+    { "source": "process_payment", "target": "send_confirmation" },
+    { "source": "process_payment", "target": "log_order" },
+    { "source": "process_payment", "target": "notify_kitchen" },
+    { "source": "log_order", "target": "send_confirmation" },
+    { "source": "notify_kitchen", "target": "send_confirmation" }
+  ]
+}

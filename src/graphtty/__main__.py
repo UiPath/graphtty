@@ -92,6 +92,20 @@ def main(argv: list[str] | None = None) -> None:
         default=None,
         help="Max output width in columns (0 = no limit, default = terminal width)",
     )
+    parser.add_argument(
+        "-d",
+        "--max-depth",
+        type=int,
+        default=None,
+        help="Max graph depth (layers from root)",
+    )
+    parser.add_argument(
+        "-b",
+        "--max-breadth",
+        type=int,
+        default=None,
+        help="Max nodes per layer",
+    )
 
     args = parser.parse_args(argv)
 
@@ -135,6 +149,8 @@ def main(argv: list[str] | None = None) -> None:
         show_types=not args.no_types,
         theme=theme,
         max_width=max_width,
+        max_depth=args.max_depth,
+        max_breadth=args.max_breadth,
     )
 
     print(render(graph, options))

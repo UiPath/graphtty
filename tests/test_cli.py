@@ -153,6 +153,7 @@ class TestCLISamples:
             "samples/deep-agent/graph.json",
             "samples/supervisor-agent/graph.json",
             "samples/world-map/graph.json",
+            "samples/call-graph/graph.json",
         ]
     )
     def sample_path(self, request):
