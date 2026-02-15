@@ -91,6 +91,30 @@ class TestDepthTruncation:
         assert ids == {"root", "__truncated_depth__"}
         assert ("root", "__truncated_depth__") in _edge_pairs(result)
 
+    def test_cyclic_graph_no_truncation(self):
+        """Cyclic graphs should be fully preserved when limits are large enough.
+
+        Models the deep-agent pattern: start → A → B → C → A (cycle), C → end.
+        """
+        g = AsciiGraph(
+            nodes=[
+                AsciiNode(id="start", name="start"),
+                AsciiNode(id="A", name="A"),
+                AsciiNode(id="B", name="B"),
+                AsciiNode(id="C", name="C"),
+                AsciiNode(id="end", name="end"),
+            ],
+            edges=[
+                AsciiEdge(source="start", target="A"),
+                AsciiEdge(source="A", target="B"),
+                AsciiEdge(source="B", target="C"),
+                AsciiEdge(source="C", target="A"),  # back-edge
+                AsciiEdge(source="C", target="end"),
+            ],
+        )
+        result = truncate_graph(g, max_depth=10, max_breadth=10)
+        assert _ids(result) == {"start", "A", "B", "C", "end"}
+
     def test_depth_no_truncation_needed(self):
         """Graph fits within max_depth — no placeholder added."""
         g = AsciiGraph(

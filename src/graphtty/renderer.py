@@ -163,7 +163,7 @@ def _do_render_canvas(
 
             inner_w = max(len(line) for line in content_lines)
             # Ensure box is wide enough for the type label in the border
-            type_lbl = _type_label(node.type, options.show_types)
+            type_lbl = _type_label(node.type, node.name, options.show_types)
             if type_lbl:
                 inner_w = max(inner_w, len(type_lbl) + 2)
             box_w = inner_w + 4  # 1 border + 1 pad + content + 1 pad + 1 border
@@ -225,7 +225,7 @@ def _do_render_canvas(
     node_border_colors: dict[str, str | None] = {}
     for node in graph.nodes:
         box = boxes[node.id]
-        type_lbl = _type_label(node.type, options.show_types)
+        type_lbl = _type_label(node.type, node.name, options.show_types)
         style = style_cache[node.type]
         border_c = style.border or None
         node_border_colors[node.id] = border_c
@@ -276,15 +276,15 @@ def _do_render_canvas(
 # Metadata helpers
 # ---------------------------------------------------------------------------
 
-# Node types that are structural markers — no border label needed.
+# Node types/names that are structural markers — no border label needed.
 _HIDDEN_TYPE_LABELS = {"__start__", "__end__", "__truncated__"}
 
 
-def _type_label(node_type: str, show_types: bool) -> str | None:
+def _type_label(node_type: str, node_name: str, show_types: bool) -> str | None:
     """Return the border type label, or *None* if it should be hidden."""
     if not show_types:
         return None
-    if node_type in _HIDDEN_TYPE_LABELS:
+    if node_type in _HIDDEN_TYPE_LABELS or node_name in _HIDDEN_TYPE_LABELS:
         return None
     return node_type
 

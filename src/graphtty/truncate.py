@@ -38,26 +38,47 @@ def truncate_graph(
             forward[e.source].append(e.target)
             in_degree[e.target] += 1
 
-    # Longest-path layer assignment via topological order (Kahn's algorithm).
-    # Processing in topo order guarantees all incoming edges are resolved
-    # before a node is expanded — correct for longest-path in a DAG.
+    # Longest-path layer assignment via modified Kahn's algorithm.
+    # Standard topo sort processes nodes whose in-degree reaches 0.
+    # When the queue empties with unprocessed nodes remaining (cycles),
+    # force-process the unprocessed node with the highest current layer
+    # to break the cycle, then resume normal topo sort.
     roots = [nid for nid in node_ids if in_degree[nid] == 0]
+    layers: dict[str, int] = {nid: 0 for nid in node_ids}
     if not roots:
-        # Pure cycle — treat all nodes as layer 0
-        layers: dict[str, int] = {nid: 0 for nid in node_ids}
+        # Pure cycle — no roots to start from, all stay at layer 0
+        pass
     else:
-        layers = {nid: 0 for nid in node_ids}
         remaining = dict(in_degree)
+        processed: set[str] = set()
         topo: deque[str] = deque(roots)
-        while topo:
-            nid = topo.popleft()
-            for child in forward[nid]:
-                new_layer = layers[nid] + 1
-                if new_layer > layers[child]:
-                    layers[child] = new_layer
-                remaining[child] -= 1
-                if remaining[child] == 0:
-                    topo.append(child)
+
+        while len(processed) < len(node_ids):
+            # Normal topo sort phase
+            while topo:
+                nid = topo.popleft()
+                if nid in processed:
+                    continue
+                processed.add(nid)
+                for child in forward[nid]:
+                    # Only update layers for unprocessed children so
+                    # that cycle back-edges don't inflate already-placed nodes.
+                    if child not in processed:
+                        new_layer = layers[nid] + 1
+                        if new_layer > layers[child]:
+                            layers[child] = new_layer
+                    remaining[child] -= 1
+                    if remaining[child] == 0:
+                        topo.append(child)
+
+            # If stuck on a cycle, force-process the unprocessed node
+            # with the highest layer (best information from predecessors)
+            if len(processed) < len(node_ids):
+                best = max(
+                    (n.id for n in graph.nodes if n.id not in processed),
+                    key=lambda nid: layers[nid],
+                )
+                topo.append(best)
 
     # --- Depth truncation ---
     keep_ids: set[str] = set()
