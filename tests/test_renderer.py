@@ -403,3 +403,74 @@ class TestForwardSkipLayerEdges:
         result = render(data)
         for node in data["nodes"]:
             assert node["name"] in result, f"Node '{node['name']}' missing from render"
+
+
+def _assert_connectors_centred(result: str) -> None:
+    """Every ┬ on a box's bottom border sits at the box centre (x + w // 2)."""
+    for line in result.split("\n"):
+        if "└" in line and "┬" in line:
+            left = line.index("└")
+            right = line.index("┘", left)
+            assert line.index("┬") - left == (right - left + 1) // 2, line
+
+
+class TestStraightEdgeCentering:
+    def test_narrow_parent_over_wide_child(self):
+        """Parent box is centred over its child so the edge leaves from its middle."""
+        g = AsciiGraph(
+            nodes=[_node("a", "A", "x"), _node("b", "ABCD", "x")],
+            edges=[_edge("a", "b")],
+        )
+        _assert_connectors_centred(render(g))
+
+    def test_wide_parent_over_narrow_child(self):
+        """Child box is centred under its parent so the edge leaves from its middle."""
+        g = AsciiGraph(
+            nodes=[_node("a", "ABCD", "x"), _node("b", "A", "x")],
+            edges=[_edge("a", "b")],
+        )
+        _assert_connectors_centred(render(g))
+
+
+class TestEdgeLabelFit:
+    def test_label_wider_than_boxes_not_clipped(self):
+        """A label that runs past the rightmost box is shown in full."""
+        g = AsciiGraph(
+            nodes=[_node("a", "A", "x"), _node("b", "B", "x")],
+            edges=[_edge("a", "b", label="a long label here")],
+        )
+        assert "a long label here" in render(g)
+
+    def test_skip_corridor_does_not_overwrite_label(self):
+        """A skip-layer corridor is routed to the right of a straight-edge label."""
+        g = AsciiGraph(
+            nodes=[
+                _node("a", "Alpha", "x"),
+                _node("b", "Bravo", "x"),
+                _node("c", "Charlie", "x"),
+                _node("d", "Delta", "x"),
+            ],
+            edges=[
+                _edge("a", "b"),
+                _edge("b", "c", label="needs more work"),
+                _edge("c", "d"),
+                _edge("a", "d"),  # skip edge: its corridor passes the label row
+            ],
+        )
+        assert "needs more work" in render(g)
+
+
+class TestHiddenTypeLabelsByName:
+    def test_start_end_names_hide_type_label(self):
+        """__start__/__end__ nodes get no border label even when type is generic."""
+        g = AsciiGraph(
+            nodes=[
+                _node("s", "__start__", "node"),
+                _node("a", "Work", "node"),
+                _node("e", "__end__", "node"),
+            ],
+            edges=[_edge("s", "a"), _edge("a", "e")],
+        )
+        lines = render(g).split("\n")
+        top_borders = [line for line in lines if "┌" in line]
+        assert sum("node" in line for line in top_borders) == 1

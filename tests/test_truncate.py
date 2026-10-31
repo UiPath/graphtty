@@ -115,6 +115,30 @@ class TestDepthTruncation:
         result = truncate_graph(g, max_depth=10, max_breadth=10)
         assert _ids(result) == {"start", "A", "B", "C", "end"}
 
+    def test_cyclic_graph_depth_counts_past_cycle(self):
+        """Nodes inside a cycle get their real depth, so max_depth cuts them.
+
+        start → A → B → C → A (cycle), C → end. Depths: A=1, B=2, C=3, end=4.
+        """
+        g = AsciiGraph(
+            nodes=[
+                AsciiNode(id="start", name="start"),
+                AsciiNode(id="A", name="A"),
+                AsciiNode(id="B", name="B"),
+                AsciiNode(id="C", name="C"),
+                AsciiNode(id="end", name="end"),
+            ],
+            edges=[
+                AsciiEdge(source="start", target="A"),
+                AsciiEdge(source="A", target="B"),
+                AsciiEdge(source="B", target="C"),
+                AsciiEdge(source="C", target="A"),  # back-edge
+                AsciiEdge(source="C", target="end"),
+            ],
+        )
+        result = truncate_graph(g, max_depth=2)
+        assert _ids(result) == {"start", "A", "B", "__truncated_depth__"}
+
     def test_depth_no_truncation_needed(self):
         """Graph fits within max_depth — no placeholder added."""
         g = AsciiGraph(
